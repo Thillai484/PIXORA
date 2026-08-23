@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class PhotoResponse {
     private Long id;
     private Long userId;
+    private String packId;
     private String originalImageUrl;
     private String generatedImageUrl;
     private String photoType;

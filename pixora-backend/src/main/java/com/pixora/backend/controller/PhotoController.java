@@ -65,7 +65,7 @@ public class PhotoController {
     }
 
     /**
-     * Start AI photo generation (POST /api/photos/generate with JSON body or POST /api/photos/{id}/generate)
+     * Start AI photo generation (POST /api/photos/generate with JSON body)
      */
     @PostMapping("/generate")
     public ResponseEntity<PhotoGenerationResponse> generatePhotoByBody(
@@ -98,7 +98,46 @@ public class PhotoController {
     }
 
     /**
-     * Start Photo Pack (batch generation for multiple presets simultaneously)
+     * Core: One Photo -> Multiple Photos parallel pack generation (POST /api/photos/generate-pack)
+     */
+    @PostMapping("/generate-pack")
+    public ResponseEntity<GeneratePackResponse> generatePack(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @Valid @RequestBody GeneratePackRequest request
+    ) {
+        GeneratePackResponse response = photoService.generatePack(principal, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Fetch all photos belonging to a pack
+     */
+    @GetMapping("/pack/{packId}")
+    public ResponseEntity<List<PhotoResponse>> getPackPhotos(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @PathVariable String packId
+    ) {
+        List<PhotoResponse> photos = photoService.getPackPhotos(principal, packId);
+        return ResponseEntity.ok(photos);
+    }
+
+    /**
+     * Download entire pack as a ZIP archive by packId
+     */
+    @GetMapping("/pack/{packId}/zip")
+    public ResponseEntity<byte[]> downloadPackZipByPackId(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @PathVariable String packId
+    ) {
+        byte[] zipBytes = photoService.downloadPackZipByPackId(principal, packId);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"pixora-" + packId + ".zip\"")
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .body(zipBytes);
+    }
+
+    /**
+     * Legacy Photo Pack generation
      */
     @PostMapping("/{id}/pack")
     public ResponseEntity<PhotoPackResponse> generatePhotoPack(
@@ -111,7 +150,7 @@ public class PhotoController {
     }
 
     /**
-     * Download generated pack bundled into a ZIP archive
+     * Download generated pack bundled into a ZIP archive by query ids
      */
     @GetMapping("/pack/zip")
     public ResponseEntity<byte[]> downloadPackZip(

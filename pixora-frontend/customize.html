@@ -59,8 +59,23 @@
 
                 <!-- Options Customizer Panel -->
                 <section class="customize-main">
+                    <!-- Pack Generation Toggle Banner -->
+                    <div class="pack-toggle-card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12)); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: 14px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                        <div>
+                            <div style="font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; font-size: 0.98rem;">
+                                <span style="font-size: 1.2rem;">⚡</span> Create as a Pack (One Photo → Multiple Styles)
+                                <span id="pack-count-pill" style="display: none; background: #6366f1; color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 700;">2 Selected</span>
+                            </div>
+                            <div style="font-size: 0.82rem; color: #cbd5e1; margin-top: 2px;">Generate Resume, LinkedIn, Passport, and IDs in one parallel batch.</div>
+                        </div>
+                        <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 28px; flex-shrink: 0;">
+                            <input type="checkbox" id="toggle-pack-mode" style="opacity: 0; width: 0; height: 0;">
+                            <span class="slider-round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .3s; border-radius: 28px;"></span>
+                        </label>
+                    </div>
+
                     <!-- Mode Switcher -->
-                    <div class="mode-switch-container">
+                    <div class="mode-switch-container" id="mode-switcher">
                         <button type="button" class="mode-tab active" id="tab-official" data-mode="OFFICIAL">
                             Official Presets
                         </button>
@@ -75,6 +90,7 @@
                             <!-- Resume -->
                             <div class="preset-card active" data-type="RESUME">
                                 <span class="preset-icon">📄</span>
+                                <span class="pack-check-indicator" style="display: none; position: absolute; top: 10px; right: 10px; background: #6366f1; color: #fff; width: 22px; height: 22px; border-radius: 50%; text-align: center; line-height: 22px; font-size: 0.8rem; font-weight: bold;">✓</span>
                                 <h3 class="preset-title">Resume / CV</h3>
                                 <p class="preset-desc">Polished corporate headshot optimized for recruiters and resumes.</p>
                                 <span class="preset-badge">Dark Blazer • Studio</span>
@@ -83,6 +99,7 @@
                             <!-- LinkedIn -->
                             <div class="preset-card" data-type="LINKEDIN">
                                 <span class="preset-icon">💼</span>
+                                <span class="pack-check-indicator" style="display: none; position: absolute; top: 10px; right: 10px; background: #6366f1; color: #fff; width: 22px; height: 22px; border-radius: 50%; text-align: center; line-height: 22px; font-size: 0.8rem; font-weight: bold;">✓</span>
                                 <h3 class="preset-title">LinkedIn Profile</h3>
                                 <p class="preset-desc">Approachable, high-trust networking portrait with warm executive lighting.</p>
                                 <span class="preset-badge">Business Smart • Soft Blur</span>
@@ -91,6 +108,7 @@
                             <!-- Passport -->
                             <div class="preset-card" data-type="PASSPORT">
                                 <span class="preset-icon">🛂</span>
+                                <span class="pack-check-indicator" style="display: none; position: absolute; top: 10px; right: 10px; background: #6366f1; color: #fff; width: 22px; height: 22px; border-radius: 50%; text-align: center; line-height: 22px; font-size: 0.8rem; font-weight: bold;">✓</span>
                                 <h3 class="preset-title">Passport Photo</h3>
                                 <p class="preset-desc">ICAO biometric compliant format. Frontal lighting and neutral expression.</p>
                                 <span class="preset-badge">White Background • Neutral</span>
@@ -99,6 +117,7 @@
                             <!-- Visa -->
                             <div class="preset-card" data-type="VISA">
                                 <span class="preset-icon">✈️</span>
+                                <span class="pack-check-indicator" style="display: none; position: absolute; top: 10px; right: 10px; background: #6366f1; color: #fff; width: 22px; height: 22px; border-radius: 50%; text-align: center; line-height: 22px; font-size: 0.8rem; font-weight: bold;">✓</span>
                                 <h3 class="preset-title">Visa Application</h3>
                                 <p class="preset-desc">Strict standard dimensions with clear solid background for consular verification.</p>
                                 <span class="preset-badge">Solid White • High Contrast</span>
@@ -107,6 +126,7 @@
                             <!-- Company ID -->
                             <div class="preset-card" data-type="COMPANY_ID">
                                 <span class="preset-icon">🏢</span>
+                                <span class="pack-check-indicator" style="display: none; position: absolute; top: 10px; right: 10px; background: #6366f1; color: #fff; width: 22px; height: 22px; border-radius: 50%; text-align: center; line-height: 22px; font-size: 0.8rem; font-weight: bold;">✓</span>
                                 <h3 class="preset-title">Company ID Badge</h3>
                                 <p class="preset-desc">Sharp, professional enterprise identity badge headshot.</p>
                                 <span class="preset-badge">Light Gray • Crisp Formal</span>
@@ -115,6 +135,7 @@
                             <!-- College ID -->
                             <div class="preset-card" data-type="COLLEGE_ID">
                                 <span class="preset-icon">🎓</span>
+                                <span class="pack-check-indicator" style="display: none; position: absolute; top: 10px; right: 10px; background: #6366f1; color: #fff; width: 22px; height: 22px; border-radius: 50%; text-align: center; line-height: 22px; font-size: 0.8rem; font-weight: bold;">✓</span>
                                 <h3 class="preset-title">College / Student ID</h3>
                                 <p class="preset-desc">Clean academic identification portrait standard.</p>
                                 <span class="preset-badge">Light Background • Natural</span>

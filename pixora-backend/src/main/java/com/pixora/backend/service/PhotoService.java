@@ -18,8 +18,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
@@ -97,9 +96,13 @@ public class PhotoService {
 
         if ("OFFICIAL".equalsIgnoreCase(mode)) {
             boolean isBiometricDoc = "PASSPORT".equalsIgnoreCase(purpose) ||
+                    "PASSPORT_PHOTO".equalsIgnoreCase(purpose) ||
                     "VISA".equalsIgnoreCase(purpose) ||
+                    "VISA_APPLICATION".equalsIgnoreCase(purpose) ||
                     "COMPANY_ID".equalsIgnoreCase(purpose) ||
-                    "COLLEGE_ID".equalsIgnoreCase(purpose);
+                    "COMPANY_ID_BADGE".equalsIgnoreCase(purpose) ||
+                    "COLLEGE_ID".equalsIgnoreCase(purpose) ||
+                    "COLLEGE_STUDENT_ID".equalsIgnoreCase(purpose);
 
             if (isBiometricDoc) {
                 photo.setMode("OFFICIAL");
@@ -129,7 +132,7 @@ public class PhotoService {
     }
 
     /**
-     * Start the AI photo generation pipeline
+     * Start single photo generation pipeline
      */
     @Transactional
     public PhotoGenerationResponse startPhotoGeneration(FirebaseUserPrincipal principal, Long photoId) {
@@ -183,9 +186,13 @@ public class PhotoService {
 
             boolean isOfficialDocument = "OFFICIAL".equalsIgnoreCase(photo.getMode()) &&
                     ("PASSPORT".equalsIgnoreCase(photo.getPhotoType()) ||
+                            "PASSPORT_PHOTO".equalsIgnoreCase(photo.getPhotoType()) ||
                             "VISA".equalsIgnoreCase(photo.getPhotoType()) ||
+                            "VISA_APPLICATION".equalsIgnoreCase(photo.getPhotoType()) ||
                             "COLLEGE_ID".equalsIgnoreCase(photo.getPhotoType()) ||
-                            "COMPANY_ID".equalsIgnoreCase(photo.getPhotoType()));
+                            "COLLEGE_STUDENT_ID".equalsIgnoreCase(photo.getPhotoType()) ||
+                            "COMPANY_ID".equalsIgnoreCase(photo.getPhotoType()) ||
+                            "COMPANY_ID_BADGE".equalsIgnoreCase(photo.getPhotoType()));
 
             if (isOfficialDocument) {
                 // Official Document Mode: Deterministic background removal + solid color composite + ICAO framing (NO AI)
@@ -242,7 +249,175 @@ public class PhotoService {
     }
 
     /**
-     * Start a Photo Pack (batch generation for multiple presets)
+     * Generate Pack: Core "One Photo -> Multiple Photos" parallel generation
+     */
+    public GeneratePackResponse generatePack(FirebaseUserPrincipal principal, GeneratePackRequest request) {
+        UserResponse user = firebaseAuthService.syncGoogleUser(principal);
+
+        Photo originalPhoto = photoRepository.findByIdAndUserId(request.getPhotoId(), user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Photo not found with id: " + request.getPhotoId()));
+
+        String packId = "pack_" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);
+        String country = (request.getCountry() != null && !request.getCountry().isBlank()) ? request.getCountry().toUpperCase() : "US";
+
+        List<Photo> createdPhotos = new ArrayList<>();
+        List<PhotoRequest> createdRequests = new ArrayList<>();
+
+        for (String type : request.getTypes()) {
+            boolean isOfficial = "PASSPORT".equalsIgnoreCase(type) ||
+                    "PASSPORT_PHOTO".equalsIgnoreCase(type) ||
+                    "VISA".equalsIgnoreCase(type) ||
+                    "VISA_APPLICATION".equalsIgnoreCase(type) ||
+                    "COMPANY_ID".equalsIgnoreCase(type) ||
+                    "COMPANY_ID_BADGE".equalsIgnoreCase(type) ||
+                    "COLLEGE_ID".equalsIgnoreCase(type) ||
+                    "COLLEGE_STUDENT_ID".equalsIgnoreCase(type);
+
+            Photo p = Photo.builder()
+                    .userId(user.getId())
+                    .packId(packId)
+                    .originalImageUrl(originalPhoto.getOriginalImageUrl())
+                    .photoType(type)
+                    .mode(isOfficial ? "OFFICIAL" : "PROFESSIONAL")
+                    .country(country)
+                    .status("PROCESSING")
+                    .build();
+
+            if (!isOfficial && request.getSharedOptions() != null) {
+                p.setStyle(request.getSharedOptions().getStyle());
+                p.setClothing(request.getSharedOptions().getClothing());
+                p.setBackground(request.getSharedOptions().getBackground());
+            }
+
+            applyNormalizedOfficialAttributes(p, type, country);
+            p = photoRepository.save(p);
+
+            PhotoRequest req = PhotoRequest.builder()
+                    .userId(user.getId())
+                    .photoId(p.getId())
+                    .requestType("PACK_GENERATION")
+                    .status("PROCESSING")
+                    .build();
+            req = photoRequestRepository.save(req);
+
+            createdPhotos.add(p);
+            createdRequests.add(req);
+        }
+
+        log.info("Initialized Photo Pack {} with {} items for user {}", packId, createdPhotos.size(), user.getId());
+
+        // Execute parallel generation across all types
+        List<CompletableFuture<PackItemResult>> futures = new ArrayList<>();
+
+        for (int i = 0; i < createdPhotos.size(); i++) {
+            final Photo p = createdPhotos.get(i);
+            final PhotoRequest req = createdRequests.get(i);
+
+            CompletableFuture<PackItemResult> future = CompletableFuture.supplyAsync(() -> {
+                try {
+                    String generatedUrl;
+                    boolean isOfficial = "OFFICIAL".equalsIgnoreCase(p.getMode());
+
+                    if (isOfficial) {
+                        generatedUrl = officialPhotoService.processOfficialPhoto(p);
+                    } else {
+                        generatedUrl = aiService.generateProfessionalPhoto(
+                                p.getOriginalImageUrl(),
+                                p.getClothing(),
+                                p.getBackground(),
+                                p.getPhotoType()
+                        );
+                    }
+
+                    p.setGeneratedImageUrl(generatedUrl);
+                    p.setStatus("DONE");
+
+                    // Evaluate compliance
+                    ComplianceResult compResult = null;
+                    try {
+                        byte[] generatedBytes = storageService.getFileBytes(generatedUrl);
+                        compResult = complianceCheckService.evaluateCompliance(p, generatedBytes);
+                        p.setComplianceResult(objectMapper.writeValueAsString(compResult));
+                    } catch (Exception ignored) {}
+
+                    photoRepository.save(p);
+
+                    req.setStatus("COMPLETED");
+                    req.setCompletedAt(LocalDateTime.now());
+                    photoRequestRepository.save(req);
+
+                    return PackItemResult.builder()
+                            .photoId(p.getId())
+                            .type(p.getPhotoType())
+                            .mode(p.getMode())
+                            .generatedImageUrl(generatedUrl)
+                            .specLabel(p.getSpecLabel())
+                            .complianceResult(compResult)
+                            .status("DONE")
+                            .build();
+
+                } catch (Exception e) {
+                    log.error("Failed pack generation item for type {}: {}", p.getPhotoType(), e.getMessage());
+
+                    p.setStatus("FAILED");
+                    photoRepository.save(p);
+
+                    req.setStatus("FAILED");
+                    req.setErrorMessage(e.getMessage());
+                    req.setCompletedAt(LocalDateTime.now());
+                    photoRequestRepository.save(req);
+
+                    return PackItemResult.builder()
+                            .photoId(p.getId())
+                            .type(p.getPhotoType())
+                            .mode(p.getMode())
+                            .specLabel(p.getSpecLabel())
+                            .status("FAILED")
+                            .errorMessage(e.getMessage())
+                            .build();
+                }
+            });
+
+            futures.add(future);
+        }
+
+        // Wait for all items to complete
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        List<PackItemResult> results = futures.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList());
+
+        boolean hasSuccess = results.stream().anyMatch(r -> "DONE".equalsIgnoreCase(r.getStatus()));
+        boolean allSuccess = results.stream().allMatch(r -> "DONE".equalsIgnoreCase(r.getStatus()));
+
+        String overallStatus = allSuccess ? "DONE" : (hasSuccess ? "PARTIAL_SUCCESS" : "FAILED");
+
+        return GeneratePackResponse.builder()
+                .success(hasSuccess)
+                .packId(packId)
+                .originalPhotoId(request.getPhotoId())
+                .total(results.size())
+                .status(overallStatus)
+                .results(results)
+                .build();
+    }
+
+    /**
+     * Fetch all photos belonging to a pack
+     */
+    @Transactional(readOnly = true)
+    public List<PhotoResponse> getPackPhotos(FirebaseUserPrincipal principal, String packId) {
+        UserResponse user = firebaseAuthService.syncGoogleUser(principal);
+        List<Photo> photos = photoRepository.findByPackIdAndUserIdOrderByCreatedAtAsc(packId, user.getId());
+
+        return photos.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Start a Photo Pack (legacy / background batch generation)
      */
     @Transactional
     public PhotoPackResponse startPhotoPack(FirebaseUserPrincipal principal, Long originalPhotoId, PhotoPackRequest request) {
@@ -262,17 +437,24 @@ public class PhotoService {
             default -> List.of("RESUME", "LINKEDIN", "PASSPORT");
         };
 
+        String packId = "pack_" + UUID.randomUUID().toString().replace("-", "").substring(0, 14);
+
         List<Photo> createdPhotos = new ArrayList<>();
         List<Long> photoIds = new ArrayList<>();
 
         for (String preset : presets) {
             boolean isOfficial = "PASSPORT".equalsIgnoreCase(preset) ||
+                    "PASSPORT_PHOTO".equalsIgnoreCase(preset) ||
                     "VISA".equalsIgnoreCase(preset) ||
+                    "VISA_APPLICATION".equalsIgnoreCase(preset) ||
                     "COMPANY_ID".equalsIgnoreCase(preset) ||
-                    "COLLEGE_ID".equalsIgnoreCase(preset);
+                    "COMPANY_ID_BADGE".equalsIgnoreCase(preset) ||
+                    "COLLEGE_ID".equalsIgnoreCase(preset) ||
+                    "COLLEGE_STUDENT_ID".equalsIgnoreCase(preset);
 
             Photo packPhoto = Photo.builder()
                     .userId(user.getId())
+                    .packId(packId)
                     .originalImageUrl(originalPhoto.getOriginalImageUrl())
                     .mode(isOfficial ? "OFFICIAL" : "PROFESSIONAL")
                     .photoType(preset)
@@ -316,7 +498,7 @@ public class PhotoService {
     }
 
     /**
-     * Bundle multiple generated photos into a ZIP archive
+     * Bundle multiple generated photos into a ZIP archive by list of IDs
      */
     @Transactional(readOnly = true)
     public byte[] downloadPackZip(FirebaseUserPrincipal principal, List<Long> photoIds) {
@@ -332,7 +514,7 @@ public class PhotoService {
                     byte[] bytes = storageService.getFileBytes(targetUrl);
 
                     if (bytes != null && bytes.length > 0) {
-                        String entryName = String.format("pixora-%s-%d.png",
+                        String entryName = String.format("pixora-%s-%d.jpg",
                                 photo.getPhotoType() != null ? photo.getPhotoType().toLowerCase() : "portrait",
                                 photo.getId());
                         ZipEntry entry = new ZipEntry(entryName);
@@ -353,6 +535,18 @@ public class PhotoService {
     }
 
     /**
+     * Bundle all photos in a pack into a ZIP archive by packId
+     */
+    @Transactional(readOnly = true)
+    public byte[] downloadPackZipByPackId(FirebaseUserPrincipal principal, String packId) {
+        UserResponse user = firebaseAuthService.syncGoogleUser(principal);
+        List<Photo> photos = photoRepository.findByPackIdAndUserIdOrderByCreatedAtAsc(packId, user.getId());
+
+        List<Long> ids = photos.stream().map(Photo::getId).collect(Collectors.toList());
+        return downloadPackZip(principal, ids);
+    }
+
+    /**
      * Check live status of photo generation
      */
     @Transactional(readOnly = true)
@@ -367,6 +561,7 @@ public class PhotoService {
         return PhotoStatusResponse.builder()
                 .success(true)
                 .photoId(photo.getId())
+                .packId(photo.getPackId())
                 .status(photo.getStatus())
                 .originalImageUrl(photo.getOriginalImageUrl())
                 .generatedImageUrl(photo.getGeneratedImageUrl())
@@ -446,44 +641,38 @@ public class PhotoService {
     private void applyNormalizedOfficialAttributes(Photo photo, String purpose, String country) {
         PhotoSpec spec = PhotoSpec.resolve(purpose, country);
 
-        switch (purpose) {
-            case "PASSPORT":
-                photo.setStyle("STUDIO");
-                photo.setClothing("FORMAL_SHIRT");
-                photo.setBackground("WHITE");
-                photo.setSpecLabel(spec.getSpecLabel());
-                break;
-            case "VISA":
-                photo.setStyle("STUDIO");
-                photo.setClothing("FORMAL_SHIRT");
-                photo.setBackground(spec == PhotoSpec.VISA_SCHENGEN ? "LIGHT_GRAY" : "WHITE");
-                photo.setSpecLabel(spec.getSpecLabel());
-                break;
-            case "COMPANY_ID":
-                photo.setStyle("STUDIO");
-                photo.setClothing("FORMAL_SHIRT");
-                photo.setBackground("LIGHT_GRAY");
-                photo.setSpecLabel(spec.getSpecLabel());
-                break;
-            case "COLLEGE_ID":
-                photo.setStyle("STUDIO");
-                photo.setClothing("FORMAL_SHIRT");
-                photo.setBackground("LIGHT_BLUE");
-                photo.setSpecLabel(spec.getSpecLabel());
-                break;
-            case "LINKEDIN":
-                photo.setStyle("CORPORATE");
-                photo.setClothing("BLAZER");
-                photo.setBackground("OFFICE");
-                photo.setSpecLabel("Executive Networking Headshot • Soft Office Bokeh");
-                break;
-            case "RESUME":
-            default:
-                photo.setStyle("CORPORATE");
-                photo.setClothing("BLAZER");
-                photo.setBackground("STUDIO");
-                photo.setSpecLabel("Corporate Resume Headshot • Dark Blazer & Studio Lighting");
-                break;
+        String upper = purpose != null ? purpose.toUpperCase() : "RESUME";
+
+        if ("PASSPORT".equals(upper) || "PASSPORT_PHOTO".equals(upper)) {
+            photo.setStyle("STUDIO");
+            photo.setClothing("FORMAL_SHIRT");
+            photo.setBackground("WHITE");
+            photo.setSpecLabel(spec.getSpecLabel());
+        } else if ("VISA".equals(upper) || "VISA_APPLICATION".equals(upper)) {
+            photo.setStyle("STUDIO");
+            photo.setClothing("FORMAL_SHIRT");
+            photo.setBackground(spec == PhotoSpec.VISA_SCHENGEN ? "LIGHT_GRAY" : "WHITE");
+            photo.setSpecLabel(spec.getSpecLabel());
+        } else if ("COMPANY_ID".equals(upper) || "COMPANY_ID_BADGE".equals(upper)) {
+            photo.setStyle("STUDIO");
+            photo.setClothing("FORMAL_SHIRT");
+            photo.setBackground("LIGHT_GRAY");
+            photo.setSpecLabel(spec.getSpecLabel());
+        } else if ("COLLEGE_ID".equals(upper) || "COLLEGE_STUDENT_ID".equals(upper)) {
+            photo.setStyle("STUDIO");
+            photo.setClothing("FORMAL_SHIRT");
+            photo.setBackground("LIGHT_BLUE");
+            photo.setSpecLabel(spec.getSpecLabel());
+        } else if ("LINKEDIN".equals(upper)) {
+            photo.setStyle("CORPORATE");
+            photo.setClothing("BLAZER");
+            photo.setBackground("OFFICE");
+            photo.setSpecLabel("Executive Networking Headshot • Soft Office Bokeh");
+        } else {
+            photo.setStyle("CORPORATE");
+            photo.setClothing("BLAZER");
+            photo.setBackground("STUDIO");
+            photo.setSpecLabel("Corporate Resume Headshot • Dark Blazer & Studio Lighting");
         }
     }
 
@@ -493,6 +682,7 @@ public class PhotoService {
         return PhotoResponse.builder()
                 .id(photo.getId())
                 .userId(photo.getUserId())
+                .packId(photo.getPackId())
                 .originalImageUrl(photo.getOriginalImageUrl())
                 .generatedImageUrl(photo.getGeneratedImageUrl())
                 .photoType(photo.getPhotoType())

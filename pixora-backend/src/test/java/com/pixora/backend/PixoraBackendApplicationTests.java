@@ -3,6 +3,7 @@ package com.pixora.backend;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pixora.backend.dto.ComplianceResult;
 import com.pixora.backend.dto.CustomizePhotoRequest;
+import com.pixora.backend.dto.GeneratePackRequest;
 import com.pixora.backend.dto.PhotoPackRequest;
 import com.pixora.backend.entity.Photo;
 import com.pixora.backend.entity.PhotoRequest;
@@ -595,5 +596,43 @@ class PixoraBackendApplicationTests {
 		assertNotNull(result);
 		assertTrue(result.getChecks().stream().anyMatch(c -> "Background Purity".equals(c.getLabel()) && "FAIL".equals(c.getStatus())));
 		assertEquals("FAIL", result.getOverallStatus());
+	}
+
+	@Test
+	void generatePackEndpointCreatesMultiplePhotoRecordsLinkedByPackId() throws Exception {
+		User user = userRepository.save(User.builder()
+				.firebaseUid("test-uid-packuser")
+				.email("packuser@pixora.app")
+				.name("Pack User")
+				.build());
+
+		byte[] validJpeg = createTestImageBytes("jpg");
+		String originalUrl = storageService.uploadOriginalPhoto(user.getId(), "packuser.jpg", validJpeg, "image/jpeg");
+
+		Photo photo = photoRepository.save(Photo.builder()
+				.userId(user.getId())
+				.originalImageUrl(originalUrl)
+				.status("UPLOADED")
+				.build());
+
+		GeneratePackRequest packReq = GeneratePackRequest.builder()
+				.photoId(photo.getId())
+				.types(List.of("PASSPORT", "COMPANY_ID", "COLLEGE_ID"))
+				.country("US")
+				.build();
+
+		mockMvc.perform(post("/api/photos/generate-pack")
+						.header("Authorization", "Bearer test-token-packuser")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(packReq)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.total").value(3))
+				.andExpect(jsonPath("$.packId").isNotEmpty())
+				.andExpect(jsonPath("$.results.length()").value(3));
+
+		// Verify database records
+		List<Photo> allUserPhotos = photoRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+		assertTrue(allUserPhotos.size() >= 4); // 1 original + 3 pack photos
 	}
 }

@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "photos", indexes = {
         @Index(name = "idx_photos_user_id", columnList = "user_id"),
-        @Index(name = "idx_photos_status", columnList = "status")
+        @Index(name = "idx_photos_status", columnList = "status"),
+        @Index(name = "idx_photos_pack_id", columnList = "pack_id")
 })
 @Getter
 @Setter
@@ -25,6 +26,9 @@ public class Photo {
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
+
+    @Column(name = "pack_id", length = 128)
+    private String packId;
 
     @Column(name = "original_image_url", nullable = false, length = 2048)
     private String originalImageUrl;

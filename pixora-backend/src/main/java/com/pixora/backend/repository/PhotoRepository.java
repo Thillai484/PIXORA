@@ -14,5 +14,9 @@ public interface PhotoRepository extends JpaRepository<Photo, Long> {
 
     Optional<Photo> findByIdAndUserId(Long id, Long userId);
 
+    List<Photo> findByPackIdOrderByCreatedAtAsc(String packId);
+
+    List<Photo> findByPackIdAndUserIdOrderByCreatedAtAsc(String packId, Long userId);
+
     long countByUserId(Long userId);
 }

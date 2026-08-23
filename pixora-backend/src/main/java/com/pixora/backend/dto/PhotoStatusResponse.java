@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class PhotoStatusResponse {
     private boolean success;
     private Long photoId;
+    private String packId;
     private String status; // UPLOADED, CONFIGURED, PROCESSING, DONE, FAILED
     private String originalImageUrl;
     private String generatedImageUrl;

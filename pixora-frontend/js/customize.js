@@ -1,52 +1,57 @@
 /**
- * Pixora Customize Controller
- * Handles Official Presets vs. Professional Custom selectors and submits configuration
+ * Pixora Studio Customization Controller
+ * Handles preset selection, style customization, pack mode toggle, and generation submission.
  */
-import { getPhoto, customizePhoto } from './api.js';
-
 document.addEventListener('DOMContentLoaded', async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const photoIdParam = urlParams.get('photoId') || sessionStorage.getItem('pixora_current_photo_id');
+    // Auth Check
+    const token = await requireAuth();
+    if (!token) return;
 
-    const sidebarPhotoImg = document.getElementById('sidebar-photo-img');
-    const sidebarStatus = document.getElementById('sidebar-status');
-    const alertBox = document.getElementById('customize-alert');
+    // Elements
     const tabOfficial = document.getElementById('tab-official');
     const tabProfessional = document.getElementById('tab-professional');
     const viewOfficial = document.getElementById('view-official');
     const viewProfessional = document.getElementById('view-professional');
-    const generateBtn = document.getElementById('generate-btn');
+    const modeSwitcher = document.getElementById('mode-switcher');
+    const generateBtn = document.getElementById('btn-generate');
     const btnText = document.getElementById('btn-text');
     const btnSpinner = document.getElementById('btn-spinner');
+    const alertBox = document.getElementById('customize-alert');
+    const sidebarPhotoImg = document.getElementById('sidebar-photo-img');
+    const sidebarStatus = document.getElementById('sidebar-status');
 
-    if (!photoIdParam) {
+    // Pack Mode Elements
+    const togglePackMode = document.getElementById('toggle-pack-mode');
+    const packCountPill = document.getElementById('pack-count-pill');
+    const packCheckIndicators = document.querySelectorAll('.pack-check-indicator');
+
+    // Query Params
+    const urlParams = new URLSearchParams(window.location.search);
+    const photoId = urlParams.get('photoId');
+
+    if (!photoId) {
         window.location.href = 'upload.html';
         return;
     }
 
-    const photoId = parseInt(photoIdParam, 10);
-
-    // Initial State
+    // State Variables
+    let isPackMode = false;
+    let selectedPackTypes = new Set(['RESUME', 'PASSPORT']); // Default 2 items in pack
     let currentMode = 'OFFICIAL';
     let currentPurpose = 'RESUME';
     let currentStyle = 'CORPORATE';
     let currentClothing = 'BLAZER';
     let currentBackground = 'OFFICE';
 
-    // Load photo preview thumbnail
+    // Populate Sidebar Preview
     try {
         const localPreview = sessionStorage.getItem('pixora_local_preview');
-        const cachedUrl = sessionStorage.getItem('pixora_current_photo_url');
-        
         if (localPreview) {
             sidebarPhotoImg.src = localPreview;
-        } else if (cachedUrl) {
-            sidebarPhotoImg.src = cachedUrl;
         } else {
-            const photo = await getPhoto(photoId);
+            const photo = await getPhotoDetails(photoId);
             if (photo && photo.originalImageUrl) {
                 sidebarPhotoImg.src = photo.originalImageUrl;
-                sessionStorage.setItem('pixora_current_photo_url', photo.originalImageUrl);
             }
         }
         sidebarStatus.textContent = `Photo #${photoId} Ready`;
@@ -54,8 +59,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn('Could not load photo thumbnail:', err);
     }
 
-    // Mode Toggle Tabs
+    // Mode Toggle Tabs (Single Mode)
     tabOfficial.addEventListener('click', () => {
+        if (isPackMode) return;
         currentMode = 'OFFICIAL';
         tabOfficial.classList.add('active');
         tabProfessional.classList.remove('active');
@@ -64,6 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     tabProfessional.addEventListener('click', () => {
+        if (isPackMode) return;
         currentMode = 'PROFESSIONAL';
         tabProfessional.classList.add('active');
         tabOfficial.classList.remove('active');
@@ -71,25 +78,108 @@ document.addEventListener('DOMContentLoaded', async () => {
         viewProfessional.style.display = 'block';
     });
 
-    // Preset Cards Click Selection (Official Mode)
+    // Preset Cards Click Selection
     const presetCards = document.querySelectorAll('.preset-card');
     const visaCountryContainer = document.getElementById('visa-country-container');
     const visaCountrySelect = document.getElementById('visa-country-select');
 
     presetCards.forEach(card => {
         card.addEventListener('click', () => {
-            presetCards.forEach(c => c.classList.remove('active'));
-            card.classList.add('active');
-            currentPurpose = card.getAttribute('data-type');
+            const type = card.getAttribute('data-type');
 
-            // Show country dropdown for Visa preset
-            if (currentPurpose === 'VISA') {
-                visaCountryContainer.style.display = 'flex';
+            if (isPackMode) {
+                // Multi-select in Pack Mode
+                if (selectedPackTypes.has(type)) {
+                    if (selectedPackTypes.size > 1) {
+                        selectedPackTypes.delete(type);
+                        card.classList.remove('active');
+                        const check = card.querySelector('.pack-check-indicator');
+                        if (check) check.style.display = 'none';
+                    } else {
+                        showAlert('Please select at least one photo style for the pack.');
+                    }
+                } else {
+                    selectedPackTypes.add(type);
+                    card.classList.add('active');
+                    const check = card.querySelector('.pack-check-indicator');
+                    if (check) check.style.display = 'block';
+                }
+
+                updatePackUI();
             } else {
-                visaCountryContainer.style.display = 'none';
+                // Single Select in Normal Mode
+                presetCards.forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                currentPurpose = type;
+
+                // Show country dropdown for Visa preset
+                if (currentPurpose === 'VISA') {
+                    visaCountryContainer.style.display = 'flex';
+                } else {
+                    visaCountryContainer.style.display = 'none';
+                }
             }
         });
     });
+
+    // Pack Mode Switcher Listener
+    if (togglePackMode) {
+        togglePackMode.addEventListener('change', () => {
+            isPackMode = togglePackMode.checked;
+            hideAlert();
+
+            if (isPackMode) {
+                // Activate Pack Mode
+                modeSwitcher.style.display = 'none';
+                viewOfficial.style.display = 'block';
+                viewProfessional.style.display = 'none';
+                packCountPill.style.display = 'inline-block';
+
+                // Sync active card states to selectedPackTypes
+                presetCards.forEach(card => {
+                    const type = card.getAttribute('data-type');
+                    const check = card.querySelector('.pack-check-indicator');
+                    if (selectedPackTypes.has(type)) {
+                        card.classList.add('active');
+                        if (check) check.style.display = 'block';
+                    } else {
+                        card.classList.remove('active');
+                        if (check) check.style.display = 'none';
+                    }
+                });
+
+                updatePackUI();
+            } else {
+                // Return to Single Preset Mode
+                modeSwitcher.style.display = 'flex';
+                packCountPill.style.display = 'none';
+                packCheckIndicators.forEach(ind => ind.style.display = 'none');
+
+                presetCards.forEach(card => {
+                    const type = card.getAttribute('data-type');
+                    if (type === currentPurpose) {
+                        card.classList.add('active');
+                    } else {
+                        card.classList.remove('active');
+                    }
+                });
+
+                btnText.textContent = '✨ Generate Professional Portrait';
+            }
+        });
+    }
+
+    function updatePackUI() {
+        const count = selectedPackTypes.size;
+        packCountPill.textContent = `${count} Selected`;
+        btnText.textContent = `✨ Generate Photo Pack (${count} Photos)`;
+
+        if (selectedPackTypes.has('VISA')) {
+            visaCountryContainer.style.display = 'flex';
+        } else {
+            visaCountryContainer.style.display = 'none';
+        }
+    }
 
     // Option Chips Click Selection (Professional Mode)
     const chipGroups = document.querySelectorAll('.chip-group');
@@ -118,28 +208,63 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnText.style.display = 'none';
             btnSpinner.style.display = 'inline-block';
 
-            const payload = {
-                photoId: photoId,
-                mode: currentMode,
-                photoType: currentMode === 'OFFICIAL' ? currentPurpose : 'PROFESSIONAL_CUSTOM',
-                country: (currentMode === 'OFFICIAL' && currentPurpose === 'VISA' && visaCountrySelect) ? visaCountrySelect.value : 'US',
-                style: currentMode === 'OFFICIAL' ? null : currentStyle,
-                clothing: currentMode === 'OFFICIAL' ? null : currentClothing,
-                background: currentMode === 'OFFICIAL' ? null : currentBackground
-            };
+            if (isPackMode) {
+                // BATCH PACK GENERATION (POST /api/photos/generate-pack)
+                const typesArray = Array.from(selectedPackTypes);
+                const packPayload = {
+                    photoId: parseInt(photoId, 10),
+                    types: typesArray,
+                    country: visaCountrySelect ? visaCountrySelect.value : 'US',
+                    sharedOptions: {
+                        style: currentStyle,
+                        clothing: currentClothing,
+                        background: currentBackground
+                    }
+                };
 
-            // Call Backend POST /api/photos/customize
-            const updatedPhoto = await customizePhoto(payload);
+                const response = await fetch(`${API_CONFIG.BASE_URL}/photos/generate-pack`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(packPayload)
+                });
 
-            // Persist selections for result rendering
-            sessionStorage.setItem('pixora_customization', JSON.stringify(payload));
-            sessionStorage.setItem('pixora_current_photo_id', photoId);
+                if (!response.ok) {
+                    const errJson = await response.json().catch(() => ({}));
+                    throw new Error(errJson.message || `Pack generation failed (HTTP ${response.status})`);
+                }
 
-            // Redirect to result page
-            window.location.href = `result.html?photoId=${photoId}`;
+                const packResult = await response.json();
+                sessionStorage.setItem('pixora_pack_data', JSON.stringify(packResult));
+                sessionStorage.setItem('pixora_current_pack_id', packResult.packId);
+
+                // Redirect to pack result page
+                window.location.href = `pack-result.html?packId=${packResult.packId}&photoId=${photoId}`;
+
+            } else {
+                // SINGLE PHOTO GENERATION (Existing Flow)
+                const payload = {
+                    photoId: photoId,
+                    mode: currentMode,
+                    photoType: currentMode === 'OFFICIAL' ? currentPurpose : 'PROFESSIONAL_CUSTOM',
+                    country: (currentMode === 'OFFICIAL' && currentPurpose === 'VISA' && visaCountrySelect) ? visaCountrySelect.value : 'US',
+                    style: currentMode === 'OFFICIAL' ? null : currentStyle,
+                    clothing: currentMode === 'OFFICIAL' ? null : currentClothing,
+                    background: currentMode === 'OFFICIAL' ? null : currentBackground
+                };
+
+                const updatedPhoto = await customizePhoto(payload);
+
+                sessionStorage.setItem('pixora_customization', JSON.stringify(payload));
+                sessionStorage.setItem('pixora_current_photo_id', photoId);
+
+                window.location.href = `result.html?photoId=${photoId}`;
+            }
         } catch (error) {
-            console.error('Customization failed:', error);
-            showAlert(error.message || 'Failed to apply photo customization. Please try again.');
+            console.error('Generation submission failed:', error);
+            showAlert(error.message || 'Failed to submit generation. Please try again.');
             generateBtn.disabled = false;
             btnText.style.display = 'inline';
             btnSpinner.style.display = 'none';
