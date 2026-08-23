@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -32,6 +33,7 @@ public class PhotoService {
     private final StorageService storageService;
     private final FirebaseAuthService firebaseAuthService;
     private final AIService aiService;
+    private final OfficialPhotoService officialPhotoService;
 
     /**
      * Process, validate, and store a user-uploaded photo
@@ -88,11 +90,8 @@ public class PhotoService {
 
             photo.setMode("OFFICIAL");
             photo.setPhotoType(purpose);
-
-            // Automatically normalize preset attributes for official formats
             applyNormalizedOfficialAttributes(photo, purpose);
         } else {
-            // Professional mode with custom choices
             photo.setMode("PROFESSIONAL");
             photo.setPhotoType("PROFESSIONAL_CUSTOM");
             photo.setStyle(request.getStyle() != null ? request.getStyle().toUpperCase() : "CORPORATE");
@@ -109,7 +108,7 @@ public class PhotoService {
     }
 
     /**
-     * Start the AI photo generation pipeline asynchronously
+     * Start the AI photo generation pipeline
      */
     @Transactional
     public PhotoGenerationResponse startPhotoGeneration(FirebaseUserPrincipal principal, Long photoId) {
@@ -133,9 +132,9 @@ public class PhotoService {
         final Long finalPhotoId = photo.getId();
         final Long finalRequestId = photoRequest.getId();
 
-        CompletableFuture.runAsync(() -> aiService.processGeneration(finalPhotoId, finalRequestId));
+        CompletableFuture.runAsync(() -> executeGenerationPipeline(finalPhotoId, finalRequestId));
 
-        log.info("Dispatched async AI generation for photo ID {}", photoId);
+        log.info("Dispatched generation pipeline for photo ID {}", photoId);
 
         return PhotoGenerationResponse.builder()
                 .success(true)
@@ -147,7 +146,66 @@ public class PhotoService {
     }
 
     /**
-     * Start a Photo Pack (batch generation for multiple presets simultaneously)
+     * Core execution pipeline: Professional (Gemini AI) vs Official (Biometric Document)
+     */
+    public void executeGenerationPipeline(Long photoId, Long requestId) {
+        Photo photo = photoRepository.findById(photoId).orElse(null);
+        PhotoRequest request = photoRequestRepository.findById(requestId).orElse(null);
+
+        if (photo == null || request == null) {
+            log.error("Generation pipeline aborted: Photo or Request not found");
+            return;
+        }
+
+        try {
+            String generatedUrl;
+
+            boolean isOfficialDocument = "OFFICIAL".equalsIgnoreCase(photo.getMode()) &&
+                    ("PASSPORT".equalsIgnoreCase(photo.getPhotoType()) ||
+                            "VISA".equalsIgnoreCase(photo.getPhotoType()) ||
+                            "COLLEGE_ID".equalsIgnoreCase(photo.getPhotoType()) ||
+                            "COMPANY_ID".equalsIgnoreCase(photo.getPhotoType()));
+
+            if (isOfficialDocument) {
+                // Official Document Mode: Skip AI entirely, use deterministic biometric pipeline
+                log.info("Executing Official Document Pipeline for photo ID {}", photoId);
+                generatedUrl = officialPhotoService.processOfficialPhoto(photo);
+            } else {
+                // Professional Mode: Execute Google Gemini 2.5 Flash Image Generation
+                log.info("Executing Google Gemini AI Generation for photo ID {}", photoId);
+                generatedUrl = aiService.generateProfessionalPhoto(
+                        photo.getOriginalImageUrl(),
+                        photo.getClothing(),
+                        photo.getBackground(),
+                        photo.getStyle()
+                );
+            }
+
+            photo.setGeneratedImageUrl(generatedUrl);
+            photo.setStatus("DONE");
+            photoRepository.save(photo);
+
+            request.setStatus("COMPLETED");
+            request.setCompletedAt(LocalDateTime.now());
+            photoRequestRepository.save(request);
+
+            log.info("Generation succeeded for photo ID {}. URL: {}", photoId, generatedUrl);
+
+        } catch (Exception e) {
+            log.error("AI Generation pipeline error for photo ID {}: {}", photoId, e.getMessage());
+
+            photo.setStatus("FAILED");
+            photoRepository.save(photo);
+
+            request.setStatus("FAILED");
+            request.setErrorMessage("AI generation is temporarily unavailable, please try again.");
+            request.setCompletedAt(LocalDateTime.now());
+            photoRequestRepository.save(request);
+        }
+    }
+
+    /**
+     * Start a Photo Pack (batch generation for multiple presets)
      */
     @Transactional
     public PhotoPackResponse startPhotoPack(FirebaseUserPrincipal principal, Long originalPhotoId, PhotoPackRequest request) {
@@ -195,7 +253,7 @@ public class PhotoService {
 
             final Long pId = packPhoto.getId();
             final Long rId = photoRequest.getId();
-            CompletableFuture.runAsync(() -> aiService.processGeneration(pId, rId));
+            CompletableFuture.runAsync(() -> executeGenerationPipeline(pId, rId));
         }
 
         log.info("Dispatched Photo Pack ({}) with {} photos for user {}", packType, createdPhotos.size(), user.getId());
@@ -215,7 +273,7 @@ public class PhotoService {
     }
 
     /**
-     * Bundle multiple generated photos into a ZIP archive for one-click download
+     * Bundle multiple generated photos into a ZIP archive
      */
     @Transactional(readOnly = true)
     public byte[] downloadPackZip(FirebaseUserPrincipal principal, List<Long> photoIds) {

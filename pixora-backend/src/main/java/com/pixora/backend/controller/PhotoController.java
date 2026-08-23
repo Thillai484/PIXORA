@@ -65,7 +65,28 @@ public class PhotoController {
     }
 
     /**
-     * Start AI photo generation (async queue)
+     * Start AI photo generation (POST /api/photos/generate with JSON body or POST /api/photos/{id}/generate)
+     */
+    @PostMapping("/generate")
+    public ResponseEntity<PhotoGenerationResponse> generatePhotoByBody(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @RequestBody Map<String, Object> body
+    ) {
+        Long photoId = null;
+        if (body.containsKey("photoId")) {
+            photoId = Long.valueOf(body.get("photoId").toString());
+        } else if (body.containsKey("id")) {
+            photoId = Long.valueOf(body.get("id").toString());
+        }
+        if (photoId == null) {
+            throw new IllegalArgumentException("photoId is required in request body");
+        }
+        PhotoGenerationResponse response = photoService.startPhotoGeneration(principal, photoId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+    }
+
+    /**
+     * Start AI photo generation by ID path parameter
      */
     @PostMapping("/{id}/generate")
     public ResponseEntity<PhotoGenerationResponse> generatePhoto(

@@ -8,13 +8,11 @@ spring:
     url: ${DATABASE_URL:jdbc:h2:mem:pixoradb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL}
     username: ${DATABASE_USERNAME:${DB_USER:sa}}
     password: ${DATABASE_PASSWORD:${DB_PASSWORD:}}
-    driver-class-name: ${DB_DRIVER:org.postgresql.Driver}
     hikari:
       data-source-properties:
         prepareThreshold: 0
         preparedStatementCacheQueries: 0
         preparedStatementCacheSizeMiB: 0
-        preferQueryMode: simple
   jpa:
     hibernate:
       ddl-auto: update
@@ -22,7 +20,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
   servlet:
     multipart:
       max-file-size: 20MB
@@ -40,6 +37,10 @@ firebase:
   project-id: ${FIREBASE_PROJECT_ID:pixora-9223f}
   service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH:}
   service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-2.5-flash-image}
 
 fal:
   api-key: ${FAL_AI_API_KEY:}
