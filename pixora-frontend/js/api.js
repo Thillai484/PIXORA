@@ -111,6 +111,33 @@ export async function customizePhoto(customizationData) {
 }
 
 /**
+ * Start AI Generation API
+ */
+export async function startGeneration(photoId) {
+    const response = await apiFetch(`/photos/${photoId}/generate`, {
+        method: 'POST'
+    });
+
+    const data = await response.json();
+    if (!response.ok && response.status !== 202) {
+        throw new Error(data.message || 'Failed to start generation');
+    }
+    return data;
+}
+
+/**
+ * Get Live Generation Status API
+ */
+export async function getPhotoStatus(photoId) {
+    const response = await apiFetch(`/photos/${photoId}/status`);
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch status');
+    }
+    return data;
+}
+
+/**
  * Get Photo Details API
  */
 export async function getPhoto(photoId) {

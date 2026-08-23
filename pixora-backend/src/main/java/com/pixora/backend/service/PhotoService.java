@@ -1,12 +1,10 @@
 package com.pixora.backend.service;
 
-import com.pixora.backend.dto.CustomizePhotoRequest;
-import com.pixora.backend.dto.FirebaseUserPrincipal;
-import com.pixora.backend.dto.PhotoResponse;
-import com.pixora.backend.dto.PhotoUploadResponse;
-import com.pixora.backend.dto.UserResponse;
+import com.pixora.backend.dto.*;
 import com.pixora.backend.entity.Photo;
+import com.pixora.backend.entity.PhotoRequest;
 import com.pixora.backend.repository.PhotoRepository;
+import com.pixora.backend.repository.PhotoRequestRepository;
 import com.pixora.backend.util.ImageValidationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -23,8 +22,10 @@ import java.io.IOException;
 public class PhotoService {
 
     private final PhotoRepository photoRepository;
+    private final PhotoRequestRepository photoRequestRepository;
     private final StorageService storageService;
     private final FirebaseAuthService firebaseAuthService;
+    private final AIService aiService;
 
     /**
      * Process, validate, and store a user-uploaded photo
@@ -124,6 +125,73 @@ public class PhotoService {
         log.info("Photo {} customized successfully with mode: {}, type: {}", photo.getId(), photo.getMode(), photo.getPhotoType());
 
         return mapToResponse(photo);
+    }
+
+    /**
+     * Start the AI photo generation pipeline asynchronously
+     */
+    @Transactional
+    public PhotoGenerationResponse startPhotoGeneration(FirebaseUserPrincipal principal, Long photoId) {
+        UserResponse user = firebaseAuthService.syncGoogleUser(principal);
+
+        Photo photo = photoRepository.findByIdAndUserId(photoId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Photo not found or does not belong to user with id: " + photoId));
+
+        // Create PhotoRequest row (status: PROCESSING)
+        PhotoRequest photoRequest = PhotoRequest.builder()
+                .userId(user.getId())
+                .photoId(photo.getId())
+                .requestType("SINGLE_PHOTO")
+                .status("PROCESSING")
+                .build();
+
+        photoRequest = photoRequestRepository.save(photoRequest);
+
+        // Update photo status to PROCESSING
+        photo.setStatus("PROCESSING");
+        photoRepository.save(photo);
+
+        final Long finalPhotoId = photo.getId();
+        final Long finalRequestId = photoRequest.getId();
+
+        // Dispatch async background generation
+        CompletableFuture.runAsync(() -> aiService.processGeneration(finalPhotoId, finalRequestId));
+
+        log.info("Dispatched async AI generation for photo ID {}", photoId);
+
+        return PhotoGenerationResponse.builder()
+                .success(true)
+                .photoId(finalPhotoId)
+                .requestId(finalRequestId)
+                .status("PROCESSING")
+                .message("Photo generation started")
+                .build();
+    }
+
+    /**
+     * Check live status of photo generation
+     */
+    @Transactional(readOnly = true)
+    public PhotoStatusResponse getPhotoStatus(FirebaseUserPrincipal principal, Long photoId) {
+        UserResponse user = firebaseAuthService.syncGoogleUser(principal);
+
+        Photo photo = photoRepository.findByIdAndUserId(photoId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Photo not found with id: " + photoId));
+
+        return PhotoStatusResponse.builder()
+                .success(true)
+                .photoId(photo.getId())
+                .status(photo.getStatus())
+                .originalImageUrl(photo.getOriginalImageUrl())
+                .generatedImageUrl(photo.getGeneratedImageUrl())
+                .mode(photo.getMode())
+                .photoType(photo.getPhotoType())
+                .style(photo.getStyle())
+                .clothing(photo.getClothing())
+                .background(photo.getBackground())
+                .createdAt(photo.getCreatedAt())
+                .updatedAt(photo.getUpdatedAt())
+                .build();
     }
 
     /**

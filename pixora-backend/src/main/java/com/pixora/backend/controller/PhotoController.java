@@ -1,13 +1,11 @@
 package com.pixora.backend.controller;
 
-import com.pixora.backend.dto.CustomizePhotoRequest;
-import com.pixora.backend.dto.FirebaseUserPrincipal;
-import com.pixora.backend.dto.PhotoResponse;
-import com.pixora.backend.dto.PhotoUploadResponse;
+import com.pixora.backend.dto.*;
 import com.pixora.backend.service.PhotoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -61,6 +59,30 @@ public class PhotoController {
     ) {
         request.setPhotoId(id);
         PhotoResponse response = photoService.customizePhoto(principal, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Start AI photo generation (async queue)
+     */
+    @PostMapping("/{id}/generate")
+    public ResponseEntity<PhotoGenerationResponse> generatePhoto(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @PathVariable Long id
+    ) {
+        PhotoGenerationResponse response = photoService.startPhotoGeneration(principal, id);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+    }
+
+    /**
+     * Check live progress status of photo generation
+     */
+    @GetMapping("/{id}/status")
+    public ResponseEntity<PhotoStatusResponse> getPhotoStatus(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @PathVariable Long id
+    ) {
+        PhotoStatusResponse response = photoService.getPhotoStatus(principal, id);
         return ResponseEntity.ok(response);
     }
 

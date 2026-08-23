@@ -8,7 +8,9 @@ import com.pixora.backend.entity.User;
 import com.pixora.backend.repository.PhotoRepository;
 import com.pixora.backend.repository.PhotoRequestRepository;
 import com.pixora.backend.repository.UserRepository;
+import com.pixora.backend.service.AIService;
 import com.pixora.backend.service.StorageService;
+import com.pixora.backend.util.PromptBuilderUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +49,9 @@ class PixoraBackendApplicationTests {
 
 	@Autowired
 	private StorageService storageService;
+
+	@Autowired
+	private AIService aiService;
 
 	@Autowired
 	private ObjectMapper objectMapper;
@@ -278,6 +283,62 @@ class PixoraBackendApplicationTests {
 				.andExpect(jsonPath("$.clothing").value("SUIT"))
 				.andExpect(jsonPath("$.background").value("OUTDOOR_BLUR"))
 				.andExpect(jsonPath("$.status").value("CONFIGURED"));
+	}
+
+	@Test
+	void promptBuilderConstructsValidPrompts() {
+		Photo passportPhoto = Photo.builder()
+				.mode("OFFICIAL")
+				.photoType("PASSPORT")
+				.build();
+		String passportPrompt = PromptBuilderUtil.buildPrompt(passportPhoto);
+		assertTrue(passportPrompt.contains("biometric passport"));
+		assertTrue(passportPrompt.contains("white background"));
+
+		Photo customPhoto = Photo.builder()
+				.mode("PROFESSIONAL")
+				.style("STUDIO")
+				.clothing("SUIT")
+				.background("OFFICE")
+				.build();
+		String customPrompt = PromptBuilderUtil.buildPrompt(customPhoto);
+		assertTrue(customPrompt.contains("suit"));
+		assertTrue(customPrompt.contains("office"));
+	}
+
+	@Test
+	void photoGenerationStartsAndStatusIsRetrievable() throws Exception {
+		User user = userRepository.save(User.builder()
+				.firebaseUid("test-uid-george")
+				.email("george@pixora.app")
+				.name("George")
+				.build());
+
+		Photo photo = photoRepository.save(Photo.builder()
+				.userId(user.getId())
+				.originalImageUrl("http://localhost:8080/storage/original/george.jpg")
+				.mode("OFFICIAL")
+				.photoType("RESUME")
+				.style("CORPORATE")
+				.clothing("BLAZER")
+				.background("STUDIO")
+				.status("CONFIGURED")
+				.build());
+
+		// Start generation -> 202 Accepted
+		mockMvc.perform(post("/api/photos/" + photo.getId() + "/generate")
+						.header("Authorization", "Bearer test-token-george"))
+				.andExpect(status().isAccepted())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.photoId").value(photo.getId()))
+				.andExpect(jsonPath("$.status").value("PROCESSING"));
+
+		// Check status endpoint
+		mockMvc.perform(get("/api/photos/" + photo.getId() + "/status")
+						.header("Authorization", "Bearer test-token-george"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.photoId").value(photo.getId()));
 	}
 
 	@Test
