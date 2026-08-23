@@ -6,10 +6,10 @@
 
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-// In production, replace with your deployed backend URL (Render / Railway) or keep relative/custom domain
+// In production, connect to your live Render backend URL
 export const BASE_URL = isLocalhost 
     ? 'http://localhost:8080/api' 
-    : 'http://localhost:8080/api'; // Update with live Render/Railway URL when deploying
+    : 'https://pixora-vo4x.onrender.com/api';
 
 /**
  * Health check helper to verify backend connectivity
