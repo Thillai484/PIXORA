@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
