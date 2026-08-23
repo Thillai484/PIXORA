@@ -1,5 +1,7 @@
 package com.pixora.backend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pixora.backend.dto.CustomizePhotoRequest;
 import com.pixora.backend.entity.Photo;
 import com.pixora.backend.entity.PhotoRequest;
 import com.pixora.backend.entity.User;
@@ -45,6 +47,9 @@ class PixoraBackendApplicationTests {
 
 	@Autowired
 	private StorageService storageService;
+
+	@Autowired
+	private ObjectMapper objectMapper;
 
 	@BeforeEach
 	void setup() {
@@ -204,6 +209,75 @@ class PixoraBackendApplicationTests {
 				.andExpect(status().isUnauthorized())
 				.andExpect(jsonPath("$.success").value(false))
 				.andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
+	}
+
+	@Test
+	void photoCustomizationOfficialModeSetsNormalizedPresets() throws Exception {
+		User user = userRepository.save(User.builder()
+				.firebaseUid("test-uid-elena")
+				.email("elena@pixora.app")
+				.name("Elena")
+				.build());
+
+		Photo photo = photoRepository.save(Photo.builder()
+				.userId(user.getId())
+				.originalImageUrl("http://localhost:8080/storage/original/sample.jpg")
+				.status("UPLOADED")
+				.build());
+
+		CustomizePhotoRequest request = CustomizePhotoRequest.builder()
+				.photoId(photo.getId())
+				.mode("OFFICIAL")
+				.photoType("PASSPORT")
+				.build();
+
+		mockMvc.perform(post("/api/photos/customize")
+						.header("Authorization", "Bearer test-token-elena")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(request)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(photo.getId()))
+				.andExpect(jsonPath("$.mode").value("OFFICIAL"))
+				.andExpect(jsonPath("$.photoType").value("PASSPORT"))
+				.andExpect(jsonPath("$.style").value("STUDIO"))
+				.andExpect(jsonPath("$.clothing").value("FORMAL_SHIRT"))
+				.andExpect(jsonPath("$.background").value("WHITE"))
+				.andExpect(jsonPath("$.status").value("CONFIGURED"));
+	}
+
+	@Test
+	void photoCustomizationProfessionalModeSetsCustomOptions() throws Exception {
+		User user = userRepository.save(User.builder()
+				.firebaseUid("test-uid-frank")
+				.email("frank@pixora.app")
+				.name("Frank")
+				.build());
+
+		Photo photo = photoRepository.save(Photo.builder()
+				.userId(user.getId())
+				.originalImageUrl("http://localhost:8080/storage/original/sample2.jpg")
+				.status("UPLOADED")
+				.build());
+
+		CustomizePhotoRequest request = CustomizePhotoRequest.builder()
+				.photoId(photo.getId())
+				.mode("PROFESSIONAL")
+				.style("CREATIVE")
+				.clothing("SUIT")
+				.background("OUTDOOR_BLUR")
+				.build();
+
+		mockMvc.perform(post("/api/photos/customize")
+						.header("Authorization", "Bearer test-token-frank")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(request)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(photo.getId()))
+				.andExpect(jsonPath("$.mode").value("PROFESSIONAL"))
+				.andExpect(jsonPath("$.style").value("CREATIVE"))
+				.andExpect(jsonPath("$.clothing").value("SUIT"))
+				.andExpect(jsonPath("$.background").value("OUTDOOR_BLUR"))
+				.andExpect(jsonPath("$.status").value("CONFIGURED"));
 	}
 
 	@Test

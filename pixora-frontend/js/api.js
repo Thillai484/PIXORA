@@ -41,6 +41,7 @@ export async function apiFetch(endpoint, options = {}) {
 
     const headers = {
         'Accept': 'application/json',
+        'Content-Type': 'application/json',
         ...(options.headers || {})
     };
 
@@ -89,6 +90,22 @@ export async function uploadPhoto(file) {
     const data = await response.json();
     if (!response.ok) {
         throw new Error(data.message || 'Upload failed');
+    }
+    return data;
+}
+
+/**
+ * Customize Photo API
+ */
+export async function customizePhoto(customizationData) {
+    const response = await apiFetch('/photos/customize', {
+        method: 'POST',
+        body: JSON.stringify(customizationData)
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || 'Customization failed');
     }
     return data;
 }

@@ -1,5 +1,6 @@
 package com.pixora.backend.service;
 
+import com.pixora.backend.dto.CustomizePhotoRequest;
 import com.pixora.backend.dto.FirebaseUserPrincipal;
 import com.pixora.backend.dto.PhotoResponse;
 import com.pixora.backend.dto.PhotoUploadResponse;
@@ -64,6 +65,65 @@ public class PhotoService {
                 .height(image.getHeight())
                 .createdAt(photo.getCreatedAt())
                 .build();
+    }
+
+    /**
+     * Update customization options for a user photo
+     */
+    @Transactional
+    public PhotoResponse customizePhoto(FirebaseUserPrincipal principal, CustomizePhotoRequest request) {
+        UserResponse user = firebaseAuthService.syncGoogleUser(principal);
+
+        Photo photo = photoRepository.findByIdAndUserId(request.getPhotoId(), user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Photo not found or does not belong to user with id: " + request.getPhotoId()));
+
+        String mode = (request.getMode() != null && !request.getMode().isBlank()) ? request.getMode().toUpperCase() : "OFFICIAL";
+
+        if ("OFFICIAL".equalsIgnoreCase(mode)) {
+            String purpose = (request.getPhotoType() != null && !request.getPhotoType().isBlank())
+                    ? request.getPhotoType().toUpperCase()
+                    : "RESUME";
+
+            photo.setMode("OFFICIAL");
+            photo.setPhotoType(purpose);
+
+            // Automatically normalize preset attributes for official formats
+            switch (purpose) {
+                case "PASSPORT":
+                case "VISA":
+                    photo.setStyle("STUDIO");
+                    photo.setClothing("FORMAL_SHIRT");
+                    photo.setBackground("WHITE");
+                    break;
+                case "COMPANY_ID":
+                case "COLLEGE_ID":
+                    photo.setStyle("STUDIO");
+                    photo.setClothing("FORMAL_SHIRT");
+                    photo.setBackground("LIGHT_GRAY");
+                    break;
+                case "LINKEDIN":
+                case "RESUME":
+                default:
+                    photo.setStyle("CORPORATE");
+                    photo.setClothing("BLAZER");
+                    photo.setBackground("STUDIO");
+                    break;
+            }
+        } else {
+            // Professional mode with custom choices
+            photo.setMode("PROFESSIONAL");
+            photo.setPhotoType("PROFESSIONAL_CUSTOM");
+            photo.setStyle(request.getStyle() != null ? request.getStyle().toUpperCase() : "CORPORATE");
+            photo.setClothing(request.getClothing() != null ? request.getClothing().toUpperCase() : "BLAZER");
+            photo.setBackground(request.getBackground() != null ? request.getBackground().toUpperCase() : "OFFICE");
+        }
+
+        photo.setStatus("CONFIGURED");
+        photo = photoRepository.save(photo);
+
+        log.info("Photo {} customized successfully with mode: {}, type: {}", photo.getId(), photo.getMode(), photo.getPhotoType());
+
+        return mapToResponse(photo);
     }
 
     /**

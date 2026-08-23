@@ -3,61 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customize Photo Style — Pixora</title>
-    <meta name="description" content="Select your photo purpose, clothing style, and background options.">
+    <title>Customize Photo — Pixora</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%22100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
 </head>
 <body>
+    <!-- Ambient Background -->
     <div class="ambient-bg">
         <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
     </div>
 
+    <!-- Header -->
     <header>
         <div class="nav-container">
             <a href="index.html" class="logo">
-                <span class="logo-icon">✦</span>
+                <span class="logo-icon">✨</span>
                 <span class="logo-text">Pixora</span>
             </a>
-            <nav>
-                <ul class="nav-links">
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="upload.html">Upload</a></li>
-                    <li><a href="my-photos.html">My Photos</a></li>
-                    <li><a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a></li>
-                </ul>
-            </nav>
+            <ul class="nav-links">
+                <li><a href="index.html#how-it-works">How It Works</a></li>
+                <li><a href="upload.html">Upload</a></li>
+                <li><a href="my-photos.html">My Photos</a></li>
+                <li id="nav-auth-container">
+                    <a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a>
+                </li>
+            </ul>
         </div>
     </header>
 
-    <main class="container">
-        <div class="placeholder-card reveal active">
-            <h2>Select Purpose & Style</h2>
-            <p>Customize your output: Official (Passport, Visa, ID) or Professional (Resume, LinkedIn).</p>
-            <a href="result.html" class="btn btn-primary">Generate Photo (Phase 5)</a>
+    <!-- Main Customize Section -->
+    <main>
+        <div class="container customize-container">
+            <div class="upload-header">
+                <span class="hero-pill">Step 2 of 3</span>
+                <h1 class="upload-title">Choose Your Style & Purpose</h1>
+                <p class="upload-subtitle">Select an official preset standard or customize your professional look.</p>
+            </div>
+
+            <!-- Error Banner -->
+            <div id="customize-alert" class="auth-alert error" style="display: none; max-width: 800px; margin: 0 auto 1.5rem;"></div>
+
+            <div class="customize-layout">
+                <!-- Photo Sidebar -->
+                <aside class="photo-sidebar">
+                    <div class="sidebar-thumb-wrapper">
+                        <img id="sidebar-photo-img" class="sidebar-thumb" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop" alt="Uploaded Photo">
+                    </div>
+                    <div>
+                        <div id="sidebar-status" class="sidebar-meta">Original Photo Loaded</div>
+                        <a href="upload.html" class="change-link">&larr; Change / Re-upload Photo</a>
+                    </div>
+                </aside>
+
+                <!-- Options Customizer Panel -->
+                <section class="customize-main">
+                    <!-- Mode Switcher -->
+                    <div class="mode-switch-container">
+                        <button type="button" class="mode-tab active" id="tab-official" data-mode="OFFICIAL">
+                            Official Presets
+                        </button>
+                        <button type="button" class="mode-tab" id="tab-professional" data-mode="PROFESSIONAL">
+                            Professional Custom
+                        </button>
+                    </div>
+
+                    <!-- Mode 1: Official Presets View -->
+                    <div id="view-official">
+                        <div class="preset-grid">
+                            <!-- Resume -->
+                            <div class="preset-card active" data-type="RESUME">
+                                <span class="preset-icon">📄</span>
+                                <h3 class="preset-title">Resume / CV</h3>
+                                <p class="preset-desc">Polished corporate headshot optimized for recruiters and resumes.</p>
+                                <span class="preset-badge">Dark Blazer • Studio</span>
+                            </div>
+
+                            <!-- LinkedIn -->
+                            <div class="preset-card" data-type="LINKEDIN">
+                                <span class="preset-icon">💼</span>
+                                <h3 class="preset-title">LinkedIn Profile</h3>
+                                <p class="preset-desc">Approachable, high-trust networking portrait with warm executive lighting.</p>
+                                <span class="preset-badge">Business Smart • Soft Blur</span>
+                            </div>
+
+                            <!-- Passport -->
+                            <div class="preset-card" data-type="PASSPORT">
+                                <span class="preset-icon">🛂</span>
+                                <h3 class="preset-title">Passport Photo</h3>
+                                <p class="preset-desc">ICAO biometric compliant format. Frontal lighting and neutral expression.</p>
+                                <span class="preset-badge">White Background • Neutral</span>
+                            </div>
+
+                            <!-- Visa -->
+                            <div class="preset-card" data-type="VISA">
+                                <span class="preset-icon">✈️</span>
+                                <h3 class="preset-title">Visa Application</h3>
+                                <p class="preset-desc">Strict standard dimensions with clear solid background for consular verification.</p>
+                                <span class="preset-badge">Solid White • High Contrast</span>
+                            </div>
+
+                            <!-- Company ID -->
+                            <div class="preset-card" data-type="COMPANY_ID">
+                                <span class="preset-icon">🏢</span>
+                                <h3 class="preset-title">Company ID Badge</h3>
+                                <p class="preset-desc">Sharp, professional enterprise identity badge headshot.</p>
+                                <span class="preset-badge">Light Gray • Crisp Formal</span>
+                            </div>
+
+                            <!-- College ID -->
+                            <div class="preset-card" data-type="COLLEGE_ID">
+                                <span class="preset-icon">🎓</span>
+                                <h3 class="preset-title">College / Student ID</h3>
+                                <p class="preset-desc">Clean academic identification portrait standard.</p>
+                                <span class="preset-badge">Light Background • Natural</span>
+                            </div>
+                        </div>
+
+                        <!-- Official Standard Notice -->
+                        <div class="notice-box">
+                            <span>ℹ️</span>
+                            <div>Official mode automatically optimizes background neutrality, clothing contrast, and biometric alignment for verified standards.</div>
+                        </div>
+                    </div>
+
+                    <!-- Mode 2: Professional Custom View (Hidden by default) -->
+                    <div id="view-professional" style="display: none;">
+                        <!-- Style Category -->
+                        <div class="option-section">
+                            <div class="option-heading"><span>✨</span> 1. Select Style & Mood</div>
+                            <div class="chip-group" data-category="style">
+                                <button type="button" class="option-chip active" data-value="CORPORATE">🏢 Corporate & Executive</button>
+                                <button type="button" class="option-chip" data-value="STUDIO">📸 High-End Studio</button>
+                                <button type="button" class="option-chip" data-value="CREATIVE">🎨 Modern & Creative</button>
+                                <button type="button" class="option-chip" data-value="MINIMAL">💎 Minimalist Clean</button>
+                            </div>
+                        </div>
+
+                        <!-- Clothing Category -->
+                        <div class="option-section">
+                            <div class="option-heading"><span>👔</span> 2. Select Attire</div>
+                            <div class="chip-group" data-category="clothing">
+                                <button type="button" class="option-chip active" data-value="BLAZER">🧥 Tailored Blazer</button>
+                                <button type="button" class="option-chip" data-value="SUIT">👔 Executive Suit & Tie</button>
+                                <button type="button" class="option-chip" data-value="FORMAL_SHIRT">👔 Crisp Formal Shirt</button>
+                                <button type="button" class="option-chip" data-value="CASUAL_SMART">👕 Smart Casual</button>
+                            </div>
+                        </div>
+
+                        <!-- Background Category -->
+                        <div class="option-section">
+                            <div class="option-heading"><span>🌆</span> 3. Select Background</div>
+                            <div class="chip-group" data-category="background">
+                                <button type="button" class="option-chip active" data-value="OFFICE">🏙️ Modern Glass Office</button>
+                                <button type="button" class="option-chip" data-value="STUDIO">🌆 Dark Studio Gradient</button>
+                                <button type="button" class="option-chip" data-value="SOLID_COLOR">🎨 Neutral Solid Gray</button>
+                                <button type="button" class="option-chip" data-value="OUTDOOR_BLUR">🌿 Outdoor City Bokeh</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom CTA Action -->
+                    <div class="generate-cta-container">
+                        <span class="cost-hint">⚡ Generated via Pixora AI Studio in ~10 seconds</span>
+                        <button type="button" id="generate-btn" class="btn btn-primary btn-lg">
+                            <span id="btn-text">Generate Photo ✨</span>
+                            <span id="btn-spinner" class="spinner" style="display: none;"></span>
+                        </button>
+                    </div>
+                </section>
+            </div>
         </div>
     </main>
 
+    <!-- Footer -->
     <footer>
         <div class="footer-container">
-            <div class="footer-copy">
-                &copy; 2026 Pixora. AI-Powered Professional Photo Studio.
-            </div>
+            <p class="footer-copy">&copy; 2026 Pixora. AI-Powered Professional Photo Studio.</p>
             <ul class="footer-links">
                 <li><a href="index.html">Home</a></li>
-                <li><a href="upload.html">Create Photo</a></li>
+                <li><a href="upload.html">Upload</a></li>
+                <li><a href="my-photos.html">My Photos</a></li>
             </ul>
         </div>
     </footer>
 
+    <!-- Scripts -->
     <script type="module">
         import { requireAuth, initNavAuth } from './js/auth.js';
-
-        document.addEventListener('DOMContentLoaded', () => {
-            if (requireAuth()) {
-                initNavAuth();
-            }
-        });
+        
+        // Guard route - redirect to login if unauthenticated
+        const isAuthed = requireAuth();
+        if (isAuthed) {
+            initNavAuth();
+        }
     </script>
+    <script type="module" src="js/customize.js"></script>
 </body>
 </html>
