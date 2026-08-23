@@ -4,42 +4,211 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixora — Turn Any Photo Into a Professional Photo</title>
+    <meta name="description" content="Upload one photo, choose what you need it for, and create a professional photo in seconds. Perfect for Resumes, LinkedIn, Passports, and IDs.">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- Ambient Animated Background Elements -->
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Top Navigation Header -->
     <header>
         <div class="nav-container">
             <a href="index.html" class="logo">
-                <span class="logo-badge">✦ Pixora</span>
+                <span class="logo-icon">✦</span>
+                <span class="logo-text">Pixora</span>
             </a>
             <nav>
                 <ul class="nav-links">
-                    <li><a href="upload.html">Create Photo</a></li>
+                    <li><a href="#how-it-works">How It Works</a></li>
+                    <li><a href="#use-cases">Use Cases</a></li>
                     <li><a href="my-photos.html">My Photos</a></li>
-                    <li><a href="login.html" class="btn btn-secondary">Sign In</a></li>
+                    <li><a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a></li>
                 </ul>
             </nav>
         </div>
     </header>
 
     <main>
-        <section class="hero">
-            <h1>Turn Any Photo Into a <span class="gradient-text">Professional Photo</span></h1>
-            <p>Upload one photo, choose what you need it for, and create a studio-quality professional photo in seconds.</p>
-            <div class="cta-group">
-                <a href="upload.html" class="btn btn-primary">Get Started</a>
-                <a href="#how-it-works" class="btn btn-secondary">How It Works</a>
+        <!-- Hero Section -->
+        <section class="hero-section container">
+            <div class="hero-pill">
+                <span>✦</span> AI Studio Quality &bull; No Photographer Needed
             </div>
+            
+            <h1 class="hero-title">
+                Turn Any Photo Into a <br>
+                <span class="gradient-text">Professional Photo</span>
+            </h1>
+
+            <p class="hero-subtitle">
+                Upload one photo, choose what you need it for, and create a studio-quality professional photo in seconds.
+            </p>
+
+            <div class="hero-cta">
+                <a href="upload.html" class="btn btn-primary btn-lg">
+                    Get Started <span>&rarr;</span>
+                </a>
+                <a href="#how-it-works" class="btn btn-secondary btn-lg">
+                    How It Works
+                </a>
+            </div>
+
             <div class="status-badge-container">
-                <span id="backend-status" class="status-badge">Checking backend connection...</span>
+                <span id="backend-status" class="status-badge">
+                    <span class="status-dot"></span> Checking backend connection...
+                </span>
+            </div>
+
+            <!-- Hero Visual Before & After Showcase -->
+            <div class="hero-visual reveal">
+                <div class="preview-card">
+                    <div class="preview-item">
+                        <span class="preview-tag tag-before">Before</span>
+                        <div class="preview-avatar avatar-casual">
+                            <span>👤</span>
+                        </div>
+                        <div class="preview-label">Casual Selfie / Mobile Photo</div>
+                        <p class="preview-desc">Uneven lighting, casual t-shirt, noisy background</p>
+                    </div>
+
+                    <div class="preview-item">
+                        <span class="preview-tag tag-after">After &bull; Pixora AI</span>
+                        <div class="preview-avatar avatar-studio">
+                            <span>✨</span>
+                        </div>
+                        <div class="preview-label">Studio-Grade Headshot</div>
+                        <p class="preview-desc">Tailored blazer, clean backdrop, studio lighting</p>
+                        <div class="badge-row">
+                            <span class="pill-feature">Identity Preserved</span>
+                            <span class="pill-feature">4K Resolution</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3-Step "How It Works" Section -->
+        <section id="how-it-works" class="section container">
+            <div class="section-header reveal">
+                <span class="section-tag">Simple 3-Step Process</span>
+                <h2 class="section-title">How Pixora Works</h2>
+                <p class="section-subtitle">Transform your everyday snapshot into an interview-winning or government-compliant portrait in seconds.</p>
+            </div>
+
+            <div class="steps-grid">
+                <!-- Step 1 -->
+                <div class="step-card reveal" style="--delay: 100ms;">
+                    <div class="step-number">01</div>
+                    <div class="step-icon-wrapper">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                    </div>
+                    <h3 class="step-heading">1. Upload Photo</h3>
+                    <p class="step-description">
+                        Upload any clear photo or selfie from your phone or laptop. Any natural lighting or background is completely fine.
+                    </p>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="step-card reveal" style="--delay: 200ms;">
+                    <div class="step-number">02</div>
+                    <div class="step-icon-wrapper">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"/>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                        </svg>
+                    </div>
+                    <h3 class="step-heading">2. Choose Purpose</h3>
+                    <p class="step-description">
+                        Select your purpose: Official (Passport, Visa, ID) or Professional (Resume, LinkedIn) and customize clothing, style, and background.
+                    </p>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="step-card reveal" style="--delay: 300ms;">
+                    <div class="step-number">03</div>
+                    <div class="step-icon-wrapper">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="m9 12 2 2 4-4"/>
+                        </svg>
+                    </div>
+                    <h3 class="step-heading">3. Get Your Photo</h3>
+                    <p class="step-description">
+                        Our face-preserving AI generates your high-definition professional photo in seconds, ready for instant download and immediate use.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Use Cases Section -->
+        <section id="use-cases" class="section container">
+            <div class="section-header reveal">
+                <span class="section-tag">Versatile Use Cases</span>
+                <h2 class="section-title">One Tool, Every Professional Need</h2>
+                <p class="section-subtitle">Engineered to produce photos that meet exact specifications and impress recruiters.</p>
+            </div>
+
+            <div class="use-cases-grid">
+                <div class="use-case-card reveal">
+                    <span class="use-case-icon">💼</span>
+                    <h3>Resume & CV</h3>
+                    <p>Stand out to hiring managers with clean, sharp corporate attire and neutral lighting.</p>
+                </div>
+
+                <div class="use-case-card reveal">
+                    <span class="use-case-icon">🌐</span>
+                    <h3>LinkedIn & Social</h3>
+                    <p>Elevate your personal brand with modern, confident headshots tailored for networking.</p>
+                </div>
+
+                <div class="use-case-card reveal">
+                    <span class="use-case-icon">🛂</span>
+                    <h3>Passport & Visa</h3>
+                    <p>Standardized biometric backgrounds and head-proportion sizing for official applications.</p>
+                </div>
+
+                <div class="use-case-card reveal">
+                    <span class="use-case-icon">🪪</span>
+                    <h3>Company & College IDs</h3>
+                    <p>Crisp, professional badge photos matching organizational formatting guidelines.</p>
+                </div>
+            </div>
+
+            <!-- Bottom CTA Banner -->
+            <div class="cta-banner reveal">
+                <h2>Ready to elevate your professional image?</h2>
+                <p>Create your first high-definition professional photo in less than 30 seconds.</p>
+                <a href="upload.html" class="btn btn-primary btn-lg">
+                    Generate Your Photo Now <span>&rarr;</span>
+                </a>
             </div>
         </section>
     </main>
 
+    <!-- Footer -->
     <footer>
-        <p>&copy; 2026 Pixora. AI-Powered Professional Photo Studio.</p>
+        <div class="footer-container">
+            <div class="footer-copy">
+                &copy; 2026 Pixora. AI-Powered Professional Photo Studio. All rights reserved.
+            </div>
+            <ul class="footer-links">
+                <li><a href="upload.html">Create Photo</a></li>
+                <li><a href="my-photos.html">My Photos</a></li>
+                <li><a href="login.html">Sign In</a></li>
+            </ul>
+        </div>
     </footer>
 
+    <!-- Main Client Script -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
