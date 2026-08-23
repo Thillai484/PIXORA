@@ -190,3 +190,32 @@ export async function deletePhoto(photoId) {
     }
     return data;
 }
+
+/**
+ * Generate Multi-Photo Pack API
+ */
+export async function generatePack(packData) {
+    const response = await apiFetch('/photos/generate-pack', {
+        method: 'POST',
+        body: JSON.stringify(packData)
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || 'Pack generation failed');
+    }
+    return data;
+}
+
+/**
+ * Fetch all photos in a pack by packId
+ */
+export async function getPackPhotos(packId) {
+    const response = await apiFetch(`/photos/pack/${packId}`);
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch pack photos');
+    }
+    return data;
+}
+

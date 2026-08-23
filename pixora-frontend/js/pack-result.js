@@ -2,10 +2,13 @@
  * Pixora Studio Photo Pack Result Controller
  * Renders batch generated photo pack items, compliance checklists, and handles ZIP downloads.
  */
+import { requireAuth, getAuthToken } from './auth.js';
+import { getPackPhotos, BASE_URL } from './api.js';
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Auth Check
-    const token = await requireAuth();
-    if (!token) return;
+    if (!requireAuth()) return;
+    const token = getAuthToken();
 
     // Elements
     const pageTitle = document.getElementById('page-title');
@@ -35,19 +38,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 2. Fetch pack photos from API
     if (packId) {
         try {
-            const response = await fetch(`${API_CONFIG.BASE_URL}/photos/pack/${packId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (response.ok) {
-                const photos = await response.json();
-                if (photos && photos.length > 0) {
-                    renderPackPhotos(photos, packId);
-                    setupZipButton(packId, photos);
-                    return;
-                }
+            const photos = await getPackPhotos(packId);
+            if (photos && photos.length > 0) {
+                renderPackPhotos(photos, packId);
+                setupZipButton(packId, photos);
+                return;
             }
         } catch (err) {
             console.warn('Failed to fetch pack from server, falling back to local payload:', err);
@@ -58,22 +53,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPackResults(packData.results, packData.packId || packId);
         setupZipButton(packData.packId || packId, packData.results);
     } else {
-        packGrid.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: rgba(15, 23, 42, 0.5); border-radius: 16px;">
-                <span style="font-size: 3rem;">🔍</span>
-                <h3 style="color: #fff; margin-top: 1rem;">No Pack Data Found</h3>
-                <p style="color: #94a3b8;">Please select multiple styles on the customize page to generate a photo pack.</p>
-                <a href="upload.html" class="btn btn-primary" style="margin-top: 1rem;">Upload Photo</a>
-            </div>
-        `;
+        if (packGrid) {
+            packGrid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: rgba(15, 23, 42, 0.5); border-radius: 16px;">
+                    <span style="font-size: 3rem;">🔍</span>
+                    <h3 style="color: #fff; margin-top: 1rem;">No Pack Data Found</h3>
+                    <p style="color: #94a3b8;">Please select multiple styles on the customize page to generate a photo pack.</p>
+                    <a href="upload.html" class="btn btn-primary" style="margin-top: 1rem;">Upload Photo</a>
+                </div>
+            `;
+        }
     }
 
     /**
      * Render photos returned from backend GET /api/photos/pack/{packId}
      */
     function renderPackPhotos(photos, packId) {
+        if (!packGrid) return;
         packGrid.innerHTML = '';
-        packSummaryTitle.textContent = `${photos.length} Professional Photos Ready`;
+        if (packSummaryTitle) packSummaryTitle.textContent = `${photos.length} Professional Photos Ready`;
 
         photos.forEach((photo, idx) => {
             const card = createPhotoCard({
@@ -93,8 +91,9 @@ document.addEventListener('DOMContentLoaded', async () => {
      * Render results returned from POST /api/photos/generate-pack
      */
     function renderPackResults(results, packId) {
+        if (!packGrid) return;
         packGrid.innerHTML = '';
-        packSummaryTitle.textContent = `${results.length} Professional Photos Ready`;
+        if (packSummaryTitle) packSummaryTitle.textContent = `${results.length} Professional Photos Ready`;
 
         results.forEach((item, idx) => {
             const card = createPhotoCard({
@@ -211,7 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btnDownloadAllZip.innerHTML = '<span>⏳ Preparing ZIP Archive...</span>';
 
                 // Try backend ZIP endpoint
-                const zipUrl = `${API_CONFIG.BASE_URL}/photos/pack/${packId}/zip`;
+                const zipUrl = `${BASE_URL}/photos/pack/${packId}/zip`;
                 const res = await fetch(zipUrl, {
                     headers: {
                         'Authorization': `Bearer ${token}`
