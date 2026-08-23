@@ -20,8 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentFile = null;
 
-    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
-    const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+    const MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
 
     // Browse Button Click
     browseBtn.addEventListener('click', (e) => {
@@ -80,15 +79,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Validate Type
-        if (!ALLOWED_TYPES.includes(file.type.toLowerCase())) {
-            showAlert('Unsupported file format. Please upload a JPG or PNG.');
+        // Validate Type (Accept any image MIME type or image extension)
+        const isImage = file.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|heic|heif|avif|bmp|tiff|gif)$/i.test(file.name);
+        if (!isImage) {
+            showAlert('Unsupported file format. Please upload an image file (JPG, PNG, WEBP, HEIC, etc.).');
             return;
         }
 
         // Validate Size
         if (file.size > MAX_SIZE_BYTES) {
-            showAlert('Image size is too large. Maximum size is 10MB.');
+            showAlert('Image size is too large. Maximum size is 20MB.');
             return;
         }
 
