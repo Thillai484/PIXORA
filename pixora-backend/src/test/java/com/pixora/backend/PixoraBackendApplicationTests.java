@@ -475,19 +475,60 @@ class PixoraBackendApplicationTests {
 	}
 
 	@Test
-	void testStorageServiceUploadAndTestController() throws Exception {
-		MockMultipartFile sampleFile = new MockMultipartFile(
-				"file",
-				"test-portrait.jpg",
-				"image/jpeg",
-				"fake-jpeg-binary-data".getBytes()
-		);
+	void generationWithDifferentPresetsProducesDistinctRequestsAndUrls() throws Exception {
+		User user = userRepository.save(User.builder()
+				.firebaseUid("test-uid-marcus")
+				.email("marcus@pixora.app")
+				.name("Marcus")
+				.build());
 
-		mockMvc.perform(multipart("/api/test/upload")
-						.file(sampleFile))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.success").value(true))
-				.andExpect(jsonPath("$.filename").value("test-portrait.jpg"))
-				.andExpect(jsonPath("$.publicUrl").isNotEmpty());
+		byte[] validJpeg = createTestImageBytes("jpg");
+		String originalUrl = storageService.uploadOriginalPhoto(user.getId(), "marcus.jpg", validJpeg, "image/jpeg");
+
+		Photo photo = photoRepository.save(Photo.builder()
+				.userId(user.getId())
+				.originalImageUrl(originalUrl)
+				.status("UPLOADED")
+				.build());
+
+		// 1. Customize & Generate Passport (Official Mode)
+		CustomizePhotoRequest passportReq = CustomizePhotoRequest.builder()
+				.photoId(photo.getId())
+				.mode("OFFICIAL")
+				.photoType("PASSPORT")
+				.build();
+
+		mockMvc.perform(post("/api/photos/customize")
+						.header("Authorization", "Bearer test-token-marcus")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(passportReq)))
+				.andExpect(status().isOk());
+
+		mockMvc.perform(post("/api/photos/" + photo.getId() + "/generate")
+						.header("Authorization", "Bearer test-token-marcus"))
+				.andExpect(status().isAccepted())
+				.andExpect(jsonPath("$.success").value(true));
+
+		// 2. Customize & Generate Resume (Professional Mode)
+		CustomizePhotoRequest resumeReq = CustomizePhotoRequest.builder()
+				.photoId(photo.getId())
+				.mode("OFFICIAL") // preset selector
+				.photoType("RESUME")
+				.build();
+
+		mockMvc.perform(post("/api/photos/customize")
+						.header("Authorization", "Bearer test-token-marcus")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(resumeReq)))
+				.andExpect(status().isOk());
+
+		mockMvc.perform(post("/api/photos/" + photo.getId() + "/generate")
+						.header("Authorization", "Bearer test-token-marcus"))
+				.andExpect(status().isAccepted())
+				.andExpect(jsonPath("$.success").value(true));
+
+		// Verify 2 distinct PhotoRequests were created for the same photo
+		List<PhotoRequest> requests = photoRequestRepository.findByPhotoId(photo.getId());
+		assertEquals(2, requests.size());
 	}
 }

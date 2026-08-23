@@ -82,15 +82,27 @@ public class PhotoService {
                 .orElseThrow(() -> new IllegalArgumentException("Photo not found or does not belong to user with id: " + request.getPhotoId()));
 
         String mode = (request.getMode() != null && !request.getMode().isBlank()) ? request.getMode().toUpperCase() : "OFFICIAL";
+        String purpose = (request.getPhotoType() != null && !request.getPhotoType().isBlank())
+                ? request.getPhotoType().toUpperCase()
+                : "RESUME";
 
         if ("OFFICIAL".equalsIgnoreCase(mode)) {
-            String purpose = (request.getPhotoType() != null && !request.getPhotoType().isBlank())
-                    ? request.getPhotoType().toUpperCase()
-                    : "RESUME";
+            // Check if document preset vs professional preset
+            boolean isBiometricDoc = "PASSPORT".equalsIgnoreCase(purpose) ||
+                    "VISA".equalsIgnoreCase(purpose) ||
+                    "COMPANY_ID".equalsIgnoreCase(purpose) ||
+                    "COLLEGE_ID".equalsIgnoreCase(purpose);
 
-            photo.setMode("OFFICIAL");
-            photo.setPhotoType(purpose);
-            applyNormalizedOfficialAttributes(photo, purpose);
+            if (isBiometricDoc) {
+                photo.setMode("OFFICIAL");
+                photo.setPhotoType(purpose);
+                applyNormalizedOfficialAttributes(photo, purpose);
+            } else {
+                // Resume and LinkedIn are Professional AI headshot presets
+                photo.setMode("PROFESSIONAL");
+                photo.setPhotoType(purpose);
+                applyNormalizedOfficialAttributes(photo, purpose);
+            }
         } else {
             photo.setMode("PROFESSIONAL");
             photo.setPhotoType("PROFESSIONAL_CUSTOM");
@@ -146,7 +158,7 @@ public class PhotoService {
     }
 
     /**
-     * Core execution pipeline: Professional (Gemini AI) vs Official (Biometric Document)
+     * Core execution pipeline: Professional (LightX AI) vs Official (Deterministic Document Engine)
      */
     public void executeGenerationPipeline(Long photoId, Long requestId) {
         Photo photo = photoRepository.findById(photoId).orElse(null);
@@ -167,17 +179,21 @@ public class PhotoService {
                             "COMPANY_ID".equalsIgnoreCase(photo.getPhotoType()));
 
             if (isOfficialDocument) {
-                // Official Document Mode: Skip AI entirely, use deterministic biometric pipeline
-                log.info("Executing Official Document Pipeline for photo ID {}", photoId);
+                // Official Document Mode: Deterministic background removal + solid color composite + ICAO framing (NO AI)
+                log.info("Executing Official Document Pipeline for photo ID {} (Type: {})", photoId, photo.getPhotoType());
                 generatedUrl = officialPhotoService.processOfficialPhoto(photo);
             } else {
-                // Professional Mode: Execute Google Gemini 2.5 Flash Image Generation
-                log.info("Executing Google Gemini AI Generation for photo ID {}", photoId);
+                // Professional Mode: Execute LightX AI Headshot Generation with distinct preset template
+                String styleOrPreset = photo.getPhotoType() != null && !photo.getPhotoType().isBlank()
+                        ? photo.getPhotoType()
+                        : photo.getStyle();
+
+                log.info("Executing LightX AI Generation for photo ID {} with preset: {}", photoId, styleOrPreset);
                 generatedUrl = aiService.generateProfessionalPhoto(
                         photo.getOriginalImageUrl(),
                         photo.getClothing(),
                         photo.getBackground(),
-                        photo.getStyle()
+                        styleOrPreset
                 );
             }
 
@@ -192,7 +208,7 @@ public class PhotoService {
             log.info("Generation succeeded for photo ID {}. URL: {}", photoId, generatedUrl);
 
         } catch (Exception e) {
-            log.error("AI Generation pipeline error for photo ID {}: {}", photoId, e.getMessage());
+            log.error("Generation pipeline error for photo ID {}: {}", photoId, e.getMessage());
 
             photo.setStatus("FAILED");
             photoRepository.save(photo);
@@ -229,10 +245,15 @@ public class PhotoService {
         List<Long> photoIds = new ArrayList<>();
 
         for (String preset : presets) {
+            boolean isOfficial = "PASSPORT".equalsIgnoreCase(preset) ||
+                    "VISA".equalsIgnoreCase(preset) ||
+                    "COMPANY_ID".equalsIgnoreCase(preset) ||
+                    "COLLEGE_ID".equalsIgnoreCase(preset);
+
             Photo packPhoto = Photo.builder()
                     .userId(user.getId())
                     .originalImageUrl(originalPhoto.getOriginalImageUrl())
-                    .mode("OFFICIAL")
+                    .mode(isOfficial ? "OFFICIAL" : "PROFESSIONAL")
                     .photoType(preset)
                     .status("PROCESSING")
                     .build();
@@ -410,6 +431,10 @@ public class PhotoService {
                 photo.setBackground("LIGHT_GRAY");
                 break;
             case "LINKEDIN":
+                photo.setStyle("CORPORATE");
+                photo.setClothing("BLAZER");
+                photo.setBackground("OFFICE");
+                break;
             case "RESUME":
             default:
                 photo.setStyle("CORPORATE");

@@ -16,7 +16,7 @@ import java.util.*;
 
 /**
  * LightX Editor AI Headshot Generation Provider
- * Implementation of AIService for realistic AI headshots and corporate portraits
+ * Generates distinct AI headshots and corporate portraits using per-preset prompt templates.
  */
 @Slf4j
 @Service
@@ -60,23 +60,32 @@ public class LightXImageService implements AIService {
             throw new IllegalStateException("LightX Editor API key is not configured.");
         }
 
-        // Build descriptive headshot prompt
-        String clothingDesc = (clothing != null && !clothing.isBlank())
-                ? clothing.toLowerCase().replace('_', ' ')
-                : "navy blazer and crisp formal shirt";
-        String bgDesc = (background != null && !background.isBlank())
-                ? background.toLowerCase().replace('_', ' ')
-                : "clean executive studio background";
-        String styleDesc = (style != null && !style.isBlank())
-                ? style.toLowerCase().replace('_', ' ')
-                : "professional corporate headshot";
+        // Build distinct prompt template
+        String textPrompt;
+        if ("LINKEDIN".equalsIgnoreCase(style)) {
+            textPrompt = "approachable professional headshot, business casual blazer, softly blurred modern office background, warm natural lighting, slight friendly smile, shoulders angled slightly, networking profile photo style";
+        } else if ("JOB_APPLICATION".equalsIgnoreCase(style) || "CAREER".equalsIgnoreCase(style)) {
+            textPrompt = "clean professional headshot, business formal attire, solid light blue or gray background, bright even lighting, formal neutral expression, passport-adjacent but softer styling";
+        } else if ("RESUME".equalsIgnoreCase(style) || "CV".equalsIgnoreCase(style)) {
+            textPrompt = "professional corporate headshot, dark navy blazer over collared shirt, plain studio gray background, soft even studio lighting, direct eye contact, neutral confident expression, sharp focus, high resolution corporate portrait photography";
+        } else {
+            String clothingDesc = (clothing != null && !clothing.isBlank())
+                    ? clothing.toLowerCase().replace('_', ' ')
+                    : "navy blazer and crisp formal shirt";
+            String bgDesc = (background != null && !background.isBlank())
+                    ? background.toLowerCase().replace('_', ' ')
+                    : "clean executive studio background";
+            String styleDesc = (style != null && !style.isBlank())
+                    ? style.toLowerCase().replace('_', ' ')
+                    : "professional corporate headshot";
 
-        String textPrompt = String.format("%s, %s, %s, sharp focus, natural studio lighting, high resolution portrait",
-                styleDesc, clothingDesc, bgDesc);
+            textPrompt = String.format("%s, %s, %s, sharp focus, natural studio lighting, high resolution portrait",
+                    styleDesc, clothingDesc, bgDesc);
+        }
 
-        log.info("Submitting LightX Headshot task with prompt: '{}' for image: {}", textPrompt, imageUrl);
+        log.info("LIGHTX_PROMPT [{}] -> '{}'", style != null ? style : "CUSTOM", textPrompt);
 
-        // 1. Submit Headshot Generation Request
+        // 1. Submit Headshot Generation Request to LightX
         Map<String, String> payload = new HashMap<>();
         payload.put("imageUrl", imageUrl);
         payload.put("textPrompt", textPrompt);
@@ -108,7 +117,7 @@ public class LightXImageService implements AIService {
             throw new RuntimeException("LightX did not return a valid orderId: " + response.body());
         }
 
-        log.info("LightX task submitted successfully. Order ID: {}. Polling for completion...", orderId);
+        log.info("LightX task submitted successfully. Order ID: {}. Polling status...", orderId);
 
         // 2. Poll Order Status until active/complete
         String finalImageUrl = pollOrderStatus(orderId);
@@ -122,7 +131,8 @@ public class LightXImageService implements AIService {
         // 3. Download bytes and store permanently in Supabase
         byte[] imageBytes = storageService.getFileBytes(finalImageUrl);
         if (imageBytes != null && imageBytes.length > 0) {
-            String filename = String.format("photo-lightx-%d.jpg", System.currentTimeMillis());
+            String filename = String.format("photo-lightx-%s-%d.jpg",
+                    style != null ? style.toLowerCase() : "headshot", System.currentTimeMillis());
             return storageService.uploadGeneratedPhoto(1L, filename, imageBytes, "image/jpeg");
         }
 
@@ -135,7 +145,6 @@ public class LightXImageService implements AIService {
 
         for (String type : photoTypes) {
             String clothing = switch (type.toUpperCase()) {
-                case "PASSPORT", "VISA", "COLLEGE_ID" -> "formal collared shirt";
                 case "COMPANY_ID" -> "smart business attire with blazer";
                 case "LINKEDIN" -> "modern tailored blazer";
                 case "RESUME" -> "classic dark executive suit and tie";
@@ -143,21 +152,13 @@ public class LightXImageService implements AIService {
             };
 
             String background = switch (type.toUpperCase()) {
-                case "PASSPORT", "VISA" -> "pure white studio background";
-                case "COLLEGE_ID", "COMPANY_ID" -> "neutral light gray studio backdrop";
+                case "COMPANY_ID" -> "neutral light gray studio backdrop";
                 case "LINKEDIN" -> "modern office interior with soft blur";
                 case "RESUME" -> "corporate studio gradient backdrop";
                 default -> "studio lighting background";
             };
 
-            String style = switch (type.toUpperCase()) {
-                case "PASSPORT", "VISA" -> "biometric document photo";
-                case "LINKEDIN" -> "approachable networking headshot";
-                case "RESUME" -> "polished executive recruiter headshot";
-                default -> "professional studio portrait";
-            };
-
-            String url = generateProfessionalPhoto(imageUrl, clothing, background, style);
+            String url = generateProfessionalPhoto(imageUrl, clothing, background, type);
             resultMap.put(type, url);
         }
 
@@ -193,7 +194,6 @@ public class LightXImageService implements AIService {
                     JsonNode body = resNode.get("body");
                     String status = body.has("status") ? body.get("status").asText() : "";
 
-                    // If output URL is ready
                     if (body.has("output") && !body.get("output").isNull() && !body.get("output").asText().isBlank()) {
                         return body.get("output").asText();
                     }

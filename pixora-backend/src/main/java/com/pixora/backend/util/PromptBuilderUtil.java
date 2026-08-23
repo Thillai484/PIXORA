@@ -4,42 +4,47 @@ import com.pixora.backend.entity.Photo;
 
 public class PromptBuilderUtil {
 
-    public static final String NEGATIVE_PROMPT = 
+    public static final String NEGATIVE_PROMPT =
             "cartoon, 3d render, anime, illustration, distorted eyes, bad anatomy, blurry, low quality, pixelated, " +
-            "overexposed, oversaturated, deformed hands, plastic skin, watermark, text, signature";
+                    "overexposed, oversaturated, deformed hands, plastic skin, watermark, text, signature";
 
     /**
-     * Build targeted generation prompt based on photo purpose and customization options
+     * Build distinct, targeted generation prompts per photo preset
      */
     public static String buildPrompt(Photo photo) {
-        String mode = photo.getMode() != null ? photo.getMode().toUpperCase() : "OFFICIAL";
-        String type = photo.getPhotoType() != null ? photo.getPhotoType().toUpperCase() : "RESUME";
+        String type = photo.getPhotoType() != null ? photo.getPhotoType().toUpperCase() : "";
 
-        if ("OFFICIAL".equals(mode)) {
-            return switch (type) {
-                case "PASSPORT" ->
-                        "Official biometric passport photograph of the person, direct frontal angle, neutral facial expression, clear open eyes, mouth closed, wearing crisp formal dark collared shirt, plain solid pure white background, shadowless studio passport lighting, high sharpness, 8k resolution, authentic photorealistic skin texture, ICAO compliance";
-                case "VISA" ->
-                        "Standard official consular visa headshot of the person, facing camera directly, relaxed neutral expression, plain bright solid white backdrop, formal business attire, balanced diffused studio lighting, ultra-sharp facial features, 8k photorealistic portrait";
-                case "LINKEDIN" ->
-                        "A high-trust professional LinkedIn profile portrait of the person, warm approachable smile, wearing a tailored business blazer, modern corporate glass office background with soft bokeh depth of field, warm volumetric rim lighting, 8k UHD, executive portrait photography";
-                case "COMPANY_ID" ->
-                        "Corporate enterprise employee badge photo of the person, direct frontal angle, confident friendly expression, crisp formal business attire, neutral smooth light gray studio backdrop, clear balanced lighting, sharp identification portrait";
-                case "COLLEGE_ID" ->
-                        "University student identity card photo of the person, natural gentle smile, clean smart casual collared shirt, smooth neutral light backdrop, high clarity, realistic natural lighting";
-                case "RESUME" ->
-                        "Executive corporate resume headshot of the person, wearing a tailored dark blazer, pleasant confident expression, subtle executive studio background with gentle vignette, masterclass studio key lighting, ultra-realistic corporate photography, 8k";
-                default ->
-                        "A professional executive headshot of the person, tailored business attire, elegant studio lighting, neutral aesthetic backdrop, 8k resolution, photorealistic masterpiece";
-            };
+        // 1. Specific Document & Professional Presets
+        switch (type) {
+            case "PASSPORT":
+                return "Official biometric passport photograph of the person, direct frontal angle, neutral facial expression, clear open eyes, mouth closed, wearing crisp formal dark collared shirt, plain solid pure white background, shadowless studio passport lighting, high sharpness, 8k resolution, authentic photorealistic skin texture, ICAO compliance";
+
+            case "VISA":
+                return "Standard official consular visa headshot of the person, facing camera directly, relaxed neutral expression, plain bright solid white backdrop, formal business attire, balanced diffused studio lighting, ultra-sharp facial features, 8k photorealistic portrait";
+
+            case "RESUME":
+                return "professional corporate headshot, dark navy blazer over collared shirt, plain studio gray background, soft even studio lighting, direct eye contact, neutral confident expression, sharp focus, high resolution corporate portrait photography";
+
+            case "LINKEDIN":
+                return "approachable professional headshot, business casual blazer, softly blurred modern office background, warm natural lighting, slight friendly smile, shoulders angled slightly, networking profile photo style";
+
+            case "JOB_APPLICATION":
+            case "CAREER":
+                return "clean professional headshot, business formal attire, solid light blue or gray background, bright even lighting, formal neutral expression, passport-adjacent but softer styling";
+
+            case "COMPANY_ID":
+                return "corporate employee ID badge photo, formal business attire, light gray studio background, sharp focus, neutral direct lighting";
+
+            case "COLLEGE_ID":
+                return "university student identity card portrait, smart casual collared shirt, smooth neutral light backdrop, high clarity, realistic natural lighting";
         }
 
-        // Professional mode with custom combinations
+        // 2. Custom Professional Combinations
         String styleDesc = switch (photo.getStyle() != null ? photo.getStyle().toUpperCase() : "CORPORATE") {
             case "STUDIO" -> "high-end editorial studio portrait, dramatic softbox lighting, crisp depth of field";
-            case "CREATIVE" -> "modern dynamic creative professional portrait, stylish aesthetic, subtle cinematic color grade";
+            case "CREATIVE" -> "modern dynamic creative professional portrait, stylish aesthetic, subtle cinematic lighting";
             case "MINIMAL" -> "clean minimalist portrait, modern soft lighting, immaculate composition";
-            case "CORPORATE" -> "prestigious executive corporate portrait, authoritative yet approachable, pristine commercial photography";
+            case "CORPORATE" -> "prestigious executive corporate portrait, authoritative yet approachable, commercial headshot style";
             default -> "masterclass professional portrait, studio quality lighting";
         };
 
@@ -47,20 +52,20 @@ public class PromptBuilderUtil {
             case "SUIT" -> "a sharp tailored dark executive suit with a crisp white shirt and tie";
             case "FORMAL_SHIRT" -> "a crisp pressed formal button-down collared shirt";
             case "CASUAL_SMART" -> "smart casual professional clothing, modern tailored jacket";
-            case "BLAZER" -> "a sophisticated modern tailored blazer with clean lapels";
-            default -> "professional executive attire";
+            case "BLAZER" -> "a sophisticated dark navy tailored blazer with clean lapels";
+            default -> "professional tailored business attire";
         };
 
         String backgroundDesc = switch (photo.getBackground() != null ? photo.getBackground().toUpperCase() : "OFFICE") {
-            case "STUDIO" -> "a dark elegant studio gradient background with subtle rim illumination";
+            case "STUDIO" -> "a dark elegant studio gradient background with soft illumination";
             case "SOLID_COLOR" -> "a clean solid neutral gray studio backdrop";
             case "OUTDOOR_BLUR" -> "a modern architectural urban terrace with blurred city bokeh";
             case "OFFICE" -> "a contemporary modern glass office interior with soft natural depth of field";
-            default -> "a high-end studio background";
+            default -> "a softly blurred professional office background";
         };
 
         return String.format(
-                "A stunning professional portrait of the person, wearing %s, %s, set against %s, volumetric studio lighting, authentic skin textures, sharp focus on eyes, 8k UHD, photorealistic masterpiece",
+                "A stunning professional portrait of the person, wearing %s, %s, set against %s, studio portrait lighting, natural authentic skin, sharp focus, high resolution corporate photography",
                 clothingDesc, styleDesc, backgroundDesc
         );
     }
