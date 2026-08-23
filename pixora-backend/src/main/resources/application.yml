@@ -9,6 +9,12 @@ spring:
     username: ${DATABASE_USERNAME:${DB_USER:sa}}
     password: ${DATABASE_PASSWORD:${DB_PASSWORD:}}
     driver-class-name: ${DB_DRIVER:org.postgresql.Driver}
+    hikari:
+      data-source-properties:
+        prepareThreshold: 0
+        preparedStatementCacheQueries: 0
+        preparedStatementCacheSizeMiB: 0
+        preferQueryMode: simple
   jpa:
     hibernate:
       ddl-auto: update
@@ -19,8 +25,8 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 20MB
+      max-request-size: 20MB
 
 app:
   frontend:
