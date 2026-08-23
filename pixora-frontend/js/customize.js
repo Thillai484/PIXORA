@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // State Variables
     let isPackMode = false;
-    let selectedPackTypes = new Set(['RESUME', 'PASSPORT']); // Default 2 items in pack
+    let selectedPackTypes = new Set(['RESUME', 'LINKEDIN', 'PASSPORT']); // Default 3 presets selected in pack
     let currentMode = 'OFFICIAL';
     let currentPurpose = 'RESUME';
     let currentStyle = 'CORPORATE';
@@ -97,25 +97,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (isPackMode) {
                 // Multi-select in Pack Mode
                 if (selectedPackTypes.has(type)) {
-                    if (selectedPackTypes.size > 1) {
-                        selectedPackTypes.delete(type);
-                        card.classList.remove('active');
-                        const check = card.querySelector('.pack-check-indicator');
-                        if (check) check.style.display = 'none';
-                    } else {
-                        showAlert('Please select at least one photo style for the pack.');
-                    }
+                    selectedPackTypes.delete(type);
+                    card.classList.remove('active', 'pack-selected');
+                    const check = card.querySelector('.pack-check-indicator');
+                    if (check) check.style.display = 'none';
                 } else {
                     selectedPackTypes.add(type);
-                    card.classList.add('active');
+                    card.classList.add('active', 'pack-selected');
                     const check = card.querySelector('.pack-check-indicator');
-                    if (check) check.style.display = 'block';
+                    if (check) check.style.display = 'flex';
                 }
 
                 updatePackUI();
             } else {
                 // Single Select in Normal Mode
-                presetCards.forEach(c => c.classList.remove('active'));
+                presetCards.forEach(c => c.classList.remove('active', 'pack-selected'));
                 card.classList.add('active');
                 currentPurpose = type;
 
@@ -147,10 +143,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const type = card.getAttribute('data-type');
                     const check = card.querySelector('.pack-check-indicator');
                     if (selectedPackTypes.has(type)) {
-                        card.classList.add('active');
-                        if (check) check.style.display = 'block';
+                        card.classList.add('active', 'pack-selected');
+                        if (check) check.style.display = 'flex';
                     } else {
-                        card.classList.remove('active');
+                        card.classList.remove('active', 'pack-selected');
                         if (check) check.style.display = 'none';
                     }
                 });
@@ -164,6 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 presetCards.forEach(card => {
                     const type = card.getAttribute('data-type');
+                    card.classList.remove('pack-selected');
                     if (type === currentPurpose) {
                         card.classList.add('active');
                     } else {
@@ -171,6 +168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
 
+                if (generateBtn) generateBtn.disabled = false;
                 if (btnText) btnText.textContent = 'Generate Photo ✨';
             }
         });
@@ -179,7 +177,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updatePackUI() {
         const count = selectedPackTypes.size;
         if (packCountPill) packCountPill.textContent = `${count} Selected`;
-        if (btnText) btnText.textContent = `✨ Generate Photo Pack (${count} Photos)`;
+
+        if (count >= 2) {
+            if (btnText) btnText.textContent = `Generate Pack (${count} selected) ✨`;
+            if (generateBtn) generateBtn.disabled = false;
+            hideAlert();
+        } else {
+            if (btnText) btnText.textContent = `Select at least 2 styles (${count}/2)`;
+            if (generateBtn) generateBtn.disabled = true;
+        }
 
         if (visaCountryContainer) {
             if (selectedPackTypes.has('VISA')) {
@@ -232,7 +238,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     };
 
+                    console.log('[Pixora Frontend] Submitting BATCH PHOTO PACK:');
+                    console.log('  Target Endpoint: POST ' + BASE_URL + '/photos/generate-pack');
+                    console.log('  Request Payload:', packPayload);
+
                     const packResult = await generatePack(packPayload);
+
+                    console.log('[Pixora Frontend] Received Pack Result:', packResult);
 
                     sessionStorage.setItem('pixora_pack_data', JSON.stringify(packResult));
                     sessionStorage.setItem('pixora_current_pack_id', packResult.packId);
@@ -241,7 +253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.location.href = `pack-result.html?packId=${packResult.packId}&photoId=${photoId}`;
 
                 } else {
-                    // SINGLE PHOTO GENERATION (Existing Flow)
+                    // SINGLE PHOTO GENERATION (POST /api/photos/customize)
                     const payload = {
                         photoId: parseInt(photoId, 10),
                         mode: currentMode,
@@ -251,6 +263,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         clothing: currentMode === 'OFFICIAL' ? null : currentClothing,
                         background: currentMode === 'OFFICIAL' ? null : currentBackground
                     };
+
+                    console.log('[Pixora Frontend] Submitting SINGLE PHOTO CUSTOMIZE:');
+                    console.log('  Target Endpoint: POST ' + BASE_URL + '/photos/customize');
+                    console.log('  Request Payload:', payload);
 
                     const updatedPhoto = await customizePhoto(payload);
 

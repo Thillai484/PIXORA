@@ -105,7 +105,16 @@ public class PhotoController {
             @AuthenticationPrincipal FirebaseUserPrincipal principal,
             @Valid @RequestBody GeneratePackRequest request
     ) {
+        log.info("[BACKEND] Received POST /api/photos/generate-pack for photo ID {} with {} requested types: {}",
+                request.getPhotoId(),
+                request.getTypes() != null ? request.getTypes().size() : 0,
+                request.getTypes());
+
         GeneratePackResponse response = photoService.generatePack(principal, request);
+
+        log.info("[BACKEND] Completed generatePack for pack ID {}: {} items produced (Status: {})",
+                response.getPackId(), response.getTotal(), response.getStatus());
+
         return ResponseEntity.ok(response);
     }
 
