@@ -3,28 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customize Style — Pixora</title>
+    <title>Customize Photo Style — Pixora</title>
+    <meta name="description" content="Select your photo purpose, clothing style, and background options.">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
     <header>
         <div class="nav-container">
             <a href="index.html" class="logo">
-                <span class="logo-badge">✦ Pixora</span>
+                <span class="logo-icon">✦</span>
+                <span class="logo-text">Pixora</span>
             </a>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="upload.html">Upload</a></li>
+                    <li><a href="my-photos.html">My Photos</a></li>
+                    <li><a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a></li>
+                </ul>
+            </nav>
         </div>
     </header>
 
-    <main>
-        <div class="placeholder-card">
+    <main class="container">
+        <div class="placeholder-card reveal active">
             <h2>Select Purpose & Style</h2>
-            <p>Select your photo purpose: Official (Passport/Visa/ID) or Professional (Resume/LinkedIn).</p>
-            <a href="result.html" class="btn btn-primary">Generate Photo (Phase 5 & 6)</a>
+            <p>Customize your output: Official (Passport, Visa, ID) or Professional (Resume, LinkedIn).</p>
+            <a href="result.html" class="btn btn-primary">Generate Photo (Phase 5)</a>
         </div>
     </main>
 
     <footer>
-        <p>&copy; 2026 Pixora. AI-Powered Professional Photo Studio.</p>
+        <div class="footer-container">
+            <div class="footer-copy">
+                &copy; 2026 Pixora. AI-Powered Professional Photo Studio.
+            </div>
+            <ul class="footer-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="upload.html">Create Photo</a></li>
+            </ul>
+        </div>
     </footer>
+
+    <script type="module">
+        import { requireAuth, initNavAuth } from './js/auth.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (requireAuth()) {
+                initNavAuth();
+            }
+        });
+    </script>
 </body>
 </html>

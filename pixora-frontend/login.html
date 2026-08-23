@@ -4,27 +4,115 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In — Pixora</title>
+    <meta name="description" content="Sign in to Pixora using your Google account to create and manage professional photos.">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
     <header>
         <div class="nav-container">
             <a href="index.html" class="logo">
-                <span class="logo-badge">✦ Pixora</span>
+                <span class="logo-icon">✦</span>
+                <span class="logo-text">Pixora</span>
             </a>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="index.html">Home</a></li>
+                </ul>
+            </nav>
         </div>
     </header>
 
     <main>
-        <div class="placeholder-card">
-            <h2>Welcome to Pixora</h2>
-            <p>Sign in to generate professional photos and access your library.</p>
-            <button id="btn-google-login" class="btn btn-primary" style="width: 100%;">Continue with Google (Phase 2)</button>
+        <div class="login-section">
+            <div class="login-card reveal active">
+                <div class="login-header">
+                    <div class="login-logo">
+                        <span class="logo-icon">✦</span>
+                        <span class="logo-text">Pixora</span>
+                    </div>
+                    <h1 class="login-title">Welcome to Pixora</h1>
+                    <p class="login-subtitle">Sign in with your Google account to generate studio-quality professional headshots and official photos.</p>
+                </div>
+
+                <div id="auth-alert" class="auth-alert"></div>
+
+                <button id="btn-google-login" class="btn btn-google">
+                    <svg class="google-icon" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span id="btn-login-text">Continue with Google</span>
+                </button>
+
+                <p class="login-footer-text">
+                    By signing in, you agree to Pixora's Terms of Service and Privacy Policy.
+                </p>
+            </div>
         </div>
     </main>
 
     <footer>
-        <p>&copy; 2026 Pixora. AI-Powered Professional Photo Studio.</p>
+        <div class="footer-container">
+            <div class="footer-copy">
+                &copy; 2026 Pixora. AI-Powered Professional Photo Studio.
+            </div>
+            <ul class="footer-links">
+                <li><a href="index.html">Home</a></li>
+            </ul>
+        </div>
     </footer>
+
+    <script type="module">
+        import { signInWithGoogle, isAuthenticated, getCurrentUser } from './js/auth.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const authAlert = document.getElementById('auth-alert');
+            const loginBtn = document.getElementById('btn-google-login');
+            const loginText = document.getElementById('btn-login-text');
+
+            // If already authenticated, redirect to destination or upload.html
+            if (isAuthenticated()) {
+                const redirect = sessionStorage.getItem('pixora_redirect') || 'upload.html';
+                sessionStorage.removeItem('pixora_redirect');
+                window.location.href = redirect;
+                return;
+            }
+
+            loginBtn.addEventListener('click', async () => {
+                try {
+                    loginBtn.disabled = true;
+                    loginText.textContent = 'Signing in...';
+                    authAlert.className = 'auth-alert';
+                    authAlert.style.display = 'none';
+
+                    const user = await signInWithGoogle();
+
+                    authAlert.textContent = `Welcome back, ${user.name || user.email}! Redirecting...`;
+                    authAlert.className = 'auth-alert info';
+                    authAlert.style.display = 'block';
+
+                    setTimeout(() => {
+                        const redirect = sessionStorage.getItem('pixora_redirect') || 'upload.html';
+                        sessionStorage.removeItem('pixora_redirect');
+                        window.location.href = redirect;
+                    }, 800);
+                } catch (error) {
+                    console.error('Sign in failed:', error);
+                    loginBtn.disabled = false;
+                    loginText.textContent = 'Continue with Google';
+                    authAlert.textContent = error.message || 'Failed to sign in. Please try again.';
+                    authAlert.className = 'auth-alert error';
+                    authAlert.style.display = 'block';
+                }
+            });
+        });
+    </script>
 </body>
 </html>

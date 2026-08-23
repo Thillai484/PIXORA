@@ -4,33 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Generated Photo — Pixora</title>
+    <meta name="description" content="View and download your generated professional portrait.">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
     <header>
         <div class="nav-container">
             <a href="index.html" class="logo">
-                <span class="logo-badge">✦ Pixora</span>
+                <span class="logo-icon">✦</span>
+                <span class="logo-text">Pixora</span>
             </a>
             <nav>
                 <ul class="nav-links">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="upload.html">Upload</a></li>
                     <li><a href="my-photos.html">My Photos</a></li>
-                    <li><a href="upload.html" class="btn btn-primary">Create Another</a></li>
+                    <li><a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a></li>
                 </ul>
             </nav>
         </div>
     </header>
 
-    <main>
-        <div class="placeholder-card">
+    <main class="container">
+        <div class="placeholder-card reveal active">
             <h2>Your Result</h2>
-            <p>Compare before/after and download your high-resolution professional photo.</p>
+            <p>Compare before/after and download your high-resolution studio photo.</p>
             <a href="my-photos.html" class="btn btn-secondary">Go to My Photos (Phase 7)</a>
         </div>
     </main>
 
     <footer>
-        <p>&copy; 2026 Pixora. AI-Powered Professional Photo Studio.</p>
+        <div class="footer-container">
+            <div class="footer-copy">
+                &copy; 2026 Pixora. AI-Powered Professional Photo Studio.
+            </div>
+            <ul class="footer-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="my-photos.html">My Photos</a></li>
+            </ul>
+        </div>
     </footer>
+
+    <script type="module">
+        import { requireAuth, initNavAuth } from './js/auth.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (requireAuth()) {
+                initNavAuth();
+            }
+        });
+    </script>
 </body>
 </html>

@@ -1,13 +1,17 @@
 import { checkBackendHealth } from './api.js';
+import { initNavAuth } from './auth.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Initialize Intersection Observer for Scroll Reveal Animations
+    // 1. Initialize Navigation Auth State
+    initNavAuth();
+
+    // 2. Initialize Intersection Observer for Scroll Reveal Animations
     initScrollReveal();
 
-    // 2. Initialize Smooth Scrolling for Internal Links
+    // 3. Initialize Smooth Scrolling for Internal Links
     initSmoothScroll();
 
-    // 3. Check Backend Connectivity
+    // 4. Check Backend Connectivity
     initHealthCheck();
 });
 

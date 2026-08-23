@@ -4,32 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Photo — Pixora</title>
+    <meta name="description" content="Upload your photo to start creating a professional portrait.">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
     <header>
         <div class="nav-container">
             <a href="index.html" class="logo">
-                <span class="logo-badge">✦ Pixora</span>
+                <span class="logo-icon">✦</span>
+                <span class="logo-text">Pixora</span>
             </a>
             <nav>
                 <ul class="nav-links">
+                    <li><a href="index.html">Home</a></li>
                     <li><a href="my-photos.html">My Photos</a></li>
+                    <li><a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a></li>
                 </ul>
             </nav>
         </div>
     </header>
 
-    <main>
-        <div class="placeholder-card">
+    <main class="container">
+        <div class="placeholder-card reveal active">
             <h2>Upload Your Photo</h2>
-            <p>Upload a clear photo to transform into a studio-quality professional shot.</p>
+            <p>Upload a clear photo or selfie to transform into a studio-quality professional shot.</p>
             <a href="customize.html" class="btn btn-primary">Continue to Customize (Phase 4)</a>
         </div>
     </main>
 
     <footer>
-        <p>&copy; 2026 Pixora. AI-Powered Professional Photo Studio.</p>
+        <div class="footer-container">
+            <div class="footer-copy">
+                &copy; 2026 Pixora. AI-Powered Professional Photo Studio.
+            </div>
+            <ul class="footer-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="my-photos.html">My Photos</a></li>
+            </ul>
+        </div>
     </footer>
+
+    <script type="module">
+        import { requireAuth, initNavAuth } from './js/auth.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Require authentication before accessing upload
+            if (requireAuth()) {
+                initNavAuth();
+            }
+        });
+    </script>
 </body>
 </html>
