@@ -2,6 +2,7 @@ package com.pixora.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pixora.backend.dto.CustomizePhotoRequest;
+import com.pixora.backend.dto.PhotoPackRequest;
 import com.pixora.backend.entity.Photo;
 import com.pixora.backend.entity.PhotoRequest;
 import com.pixora.backend.entity.User;
@@ -421,6 +422,56 @@ class PixoraBackendApplicationTests {
 
 		assertFalse(photoRepository.findById(photo.getId()).isPresent());
 		assertTrue(photoRequestRepository.findByPhotoId(photo.getId()).isEmpty());
+	}
+
+	@Test
+	void photoPackGenerationDispatchesMultiplePhotos() throws Exception {
+		User user = userRepository.save(User.builder()
+				.firebaseUid("test-uid-kyle")
+				.email("kyle@pixora.app")
+				.name("Kyle")
+				.build());
+
+		Photo photo = photoRepository.save(Photo.builder()
+				.userId(user.getId())
+				.originalImageUrl("http://localhost:8080/storage/original/kyle.jpg")
+				.status("UPLOADED")
+				.build());
+
+		PhotoPackRequest packReq = PhotoPackRequest.builder()
+				.packType("PROFESSIONAL_PACK")
+				.build();
+
+		mockMvc.perform(post("/api/photos/" + photo.getId() + "/pack")
+						.header("Authorization", "Bearer test-token-kyle")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(packReq)))
+				.andExpect(status().isAccepted())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.totalPhotos").value(3))
+				.andExpect(jsonPath("$.generatedPhotoIds.length()").value(3));
+	}
+
+	@Test
+	void downloadPackZipReturnsValidZipMediaType() throws Exception {
+		User user = userRepository.save(User.builder()
+				.firebaseUid("test-uid-laura")
+				.email("laura@pixora.app")
+				.name("Laura")
+				.build());
+
+		Photo p1 = photoRepository.save(Photo.builder()
+				.userId(user.getId())
+				.originalImageUrl("http://localhost:8080/storage/original/p1.jpg")
+				.photoType("RESUME")
+				.status("DONE")
+				.build());
+
+		mockMvc.perform(get("/api/photos/pack/zip?ids=" + p1.getId())
+						.header("Authorization", "Bearer test-token-laura"))
+				.andExpect(status().isOk())
+				.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"pixora-photo-pack.zip\""))
+				.andExpect(content().contentType("application/zip"));
 	}
 
 	@Test

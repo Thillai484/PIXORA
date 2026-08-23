@@ -13,10 +13,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Slf4j
 @Service
@@ -86,27 +90,7 @@ public class PhotoService {
             photo.setPhotoType(purpose);
 
             // Automatically normalize preset attributes for official formats
-            switch (purpose) {
-                case "PASSPORT":
-                case "VISA":
-                    photo.setStyle("STUDIO");
-                    photo.setClothing("FORMAL_SHIRT");
-                    photo.setBackground("WHITE");
-                    break;
-                case "COMPANY_ID":
-                case "COLLEGE_ID":
-                    photo.setStyle("STUDIO");
-                    photo.setClothing("FORMAL_SHIRT");
-                    photo.setBackground("LIGHT_GRAY");
-                    break;
-                case "LINKEDIN":
-                case "RESUME":
-                default:
-                    photo.setStyle("CORPORATE");
-                    photo.setClothing("BLAZER");
-                    photo.setBackground("STUDIO");
-                    break;
-            }
+            applyNormalizedOfficialAttributes(photo, purpose);
         } else {
             // Professional mode with custom choices
             photo.setMode("PROFESSIONAL");
@@ -163,6 +147,111 @@ public class PhotoService {
     }
 
     /**
+     * Start a Photo Pack (batch generation for multiple presets simultaneously)
+     */
+    @Transactional
+    public PhotoPackResponse startPhotoPack(FirebaseUserPrincipal principal, Long originalPhotoId, PhotoPackRequest request) {
+        UserResponse user = firebaseAuthService.syncGoogleUser(principal);
+
+        Photo originalPhoto = photoRepository.findByIdAndUserId(originalPhotoId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Photo not found with id: " + originalPhotoId));
+
+        String packType = (request.getPackType() != null && !request.getPackType().isBlank())
+                ? request.getPackType().toUpperCase()
+                : "PROFESSIONAL_PACK";
+
+        List<String> presets = switch (packType) {
+            case "OFFICIAL_PACK", "OFFICIAL" -> List.of("PASSPORT", "VISA", "COLLEGE_ID");
+            case "COMPLETE_PACK", "COMPLETE", "ALL" -> List.of("RESUME", "LINKEDIN", "PASSPORT", "VISA", "COMPANY_ID", "COLLEGE_ID");
+            case "PROFESSIONAL_PACK", "PROFESSIONAL" -> List.of("RESUME", "LINKEDIN", "COMPANY_ID");
+            default -> List.of("RESUME", "LINKEDIN", "PASSPORT");
+        };
+
+        List<Photo> createdPhotos = new ArrayList<>();
+        List<Long> photoIds = new ArrayList<>();
+
+        for (String preset : presets) {
+            Photo packPhoto = Photo.builder()
+                    .userId(user.getId())
+                    .originalImageUrl(originalPhoto.getOriginalImageUrl())
+                    .mode("OFFICIAL")
+                    .photoType(preset)
+                    .status("PROCESSING")
+                    .build();
+
+            applyNormalizedOfficialAttributes(packPhoto, preset);
+            packPhoto = photoRepository.save(packPhoto);
+
+            PhotoRequest photoRequest = PhotoRequest.builder()
+                    .userId(user.getId())
+                    .photoId(packPhoto.getId())
+                    .requestType("PACK_GENERATION")
+                    .status("PROCESSING")
+                    .build();
+            photoRequest = photoRequestRepository.save(photoRequest);
+
+            createdPhotos.add(packPhoto);
+            photoIds.add(packPhoto.getId());
+
+            final Long pId = packPhoto.getId();
+            final Long rId = photoRequest.getId();
+            CompletableFuture.runAsync(() -> aiService.processGeneration(pId, rId));
+        }
+
+        log.info("Dispatched Photo Pack ({}) with {} photos for user {}", packType, createdPhotos.size(), user.getId());
+
+        List<PhotoResponse> responses = createdPhotos.stream().map(this::mapToResponse).collect(Collectors.toList());
+
+        return PhotoPackResponse.builder()
+                .success(true)
+                .packType(packType)
+                .originalPhotoId(originalPhotoId)
+                .totalPhotos(createdPhotos.size())
+                .generatedPhotoIds(photoIds)
+                .photos(responses)
+                .status("PROCESSING")
+                .message("Started batch generation for " + createdPhotos.size() + " photos")
+                .build();
+    }
+
+    /**
+     * Bundle multiple generated photos into a ZIP archive for one-click download
+     */
+    @Transactional(readOnly = true)
+    public byte[] downloadPackZip(FirebaseUserPrincipal principal, List<Long> photoIds) {
+        UserResponse user = firebaseAuthService.syncGoogleUser(principal);
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ZipOutputStream zos = new ZipOutputStream(baos)) {
+
+            for (Long id : photoIds) {
+                Photo photo = photoRepository.findByIdAndUserId(id, user.getId()).orElse(null);
+                if (photo != null) {
+                    String targetUrl = photo.getGeneratedImageUrl() != null ? photo.getGeneratedImageUrl() : photo.getOriginalImageUrl();
+                    byte[] bytes = storageService.getFileBytes(targetUrl);
+
+                    if (bytes != null && bytes.length > 0) {
+                        String entryName = String.format("pixora-%s-%d.png",
+                                photo.getPhotoType() != null ? photo.getPhotoType().toLowerCase() : "portrait",
+                                photo.getId());
+                        ZipEntry entry = new ZipEntry(entryName);
+                        zos.putNextEntry(entry);
+                        zos.write(bytes);
+                        zos.closeEntry();
+                    }
+                }
+            }
+
+            zos.finish();
+            return baos.toByteArray();
+
+        } catch (Exception e) {
+            log.error("Failed to create ZIP package: {}", e.getMessage());
+            return new byte[0];
+        }
+    }
+
+    /**
      * Check live status of photo generation
      */
     @Transactional(readOnly = true)
@@ -211,10 +300,8 @@ public class PhotoService {
         Photo photo = photoRepository.findByIdAndUserId(photoId, user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Photo not found or does not belong to user with id: " + photoId));
 
-        // 1. Delete associated PhotoRequests
         photoRequestRepository.deleteByPhotoId(photo.getId());
 
-        // 2. Delete storage files
         if (photo.getOriginalImageUrl() != null) {
             storageService.deleteFile(photo.getOriginalImageUrl());
         }
@@ -222,9 +309,7 @@ public class PhotoService {
             storageService.deleteFile(photo.getGeneratedImageUrl());
         }
 
-        // 3. Delete Photo entity
         photoRepository.delete(photo);
-
         log.info("Photo {} deleted successfully for user {}", photoId, user.getId());
     }
 
@@ -250,6 +335,30 @@ public class PhotoService {
                 .orElseThrow(() -> new IllegalArgumentException("Photo not found with id: " + id));
 
         return mapToResponse(photo);
+    }
+
+    private void applyNormalizedOfficialAttributes(Photo photo, String purpose) {
+        switch (purpose) {
+            case "PASSPORT":
+            case "VISA":
+                photo.setStyle("STUDIO");
+                photo.setClothing("FORMAL_SHIRT");
+                photo.setBackground("WHITE");
+                break;
+            case "COMPANY_ID":
+            case "COLLEGE_ID":
+                photo.setStyle("STUDIO");
+                photo.setClothing("FORMAL_SHIRT");
+                photo.setBackground("LIGHT_GRAY");
+                break;
+            case "LINKEDIN":
+            case "RESUME":
+            default:
+                photo.setStyle("CORPORATE");
+                photo.setClothing("BLAZER");
+                photo.setBackground("STUDIO");
+                break;
+        }
     }
 
     public PhotoResponse mapToResponse(Photo photo) {

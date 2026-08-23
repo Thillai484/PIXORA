@@ -77,6 +77,34 @@ public class PhotoController {
     }
 
     /**
+     * Start Photo Pack (batch generation for multiple presets simultaneously)
+     */
+    @PostMapping("/{id}/pack")
+    public ResponseEntity<PhotoPackResponse> generatePhotoPack(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody PhotoPackRequest request
+    ) {
+        PhotoPackResponse response = photoService.startPhotoPack(principal, id, request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+    }
+
+    /**
+     * Download generated pack bundled into a ZIP archive
+     */
+    @GetMapping("/pack/zip")
+    public ResponseEntity<byte[]> downloadPackZip(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @RequestParam("ids") List<Long> ids
+    ) {
+        byte[] zipBytes = photoService.downloadPackZip(principal, ids);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"pixora-photo-pack.zip\"")
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .body(zipBytes);
+    }
+
+    /**
      * Check live progress status of photo generation
      */
     @GetMapping("/{id}/status")

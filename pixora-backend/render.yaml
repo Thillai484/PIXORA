@@ -1,0 +1,33 @@
+# ==========================================
+# Render Blueprint Manifest — Pixora Backend
+# ==========================================
+services:
+  - type: web
+    name: pixora-backend
+    runtime: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: FAL_AI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        value: pixora-9223f
+      - key: FIREBASE_CREDENTIALS_JSON
+        sync: false

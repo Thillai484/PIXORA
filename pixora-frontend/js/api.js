@@ -126,6 +126,22 @@ export async function startGeneration(photoId) {
 }
 
 /**
+ * Start Photo Pack (Batch Generation) API
+ */
+export async function generatePhotoPack(photoId, packType) {
+    const response = await apiFetch(`/photos/${photoId}/pack`, {
+        method: 'POST',
+        body: JSON.stringify({ packType })
+    });
+
+    const data = await response.json();
+    if (!response.ok && response.status !== 202) {
+        throw new Error(data.message || 'Failed to start photo pack generation');
+    }
+    return data;
+}
+
+/**
  * Get Live Generation Status API
  */
 export async function getPhotoStatus(photoId) {
