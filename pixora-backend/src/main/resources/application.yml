@@ -38,9 +38,8 @@ firebase:
   service-account-path: ${FIREBASE_SERVICE_ACCOUNT_PATH:}
   service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}
 
-gemini:
-  api-key: ${GEMINI_API_KEY:}
-  model: ${GEMINI_MODEL:gemini-2.5-flash-image}
+lightx:
+  api-key: ${LIGHTX_API_KEY:}
 
 logging:
   level:
