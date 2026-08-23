@@ -53,6 +53,9 @@ public class Photo {
     @Column(length = 256)
     private String specLabel;
 
+    @Column(name = "compliance_result", columnDefinition = "TEXT")
+    private String complianceResult;
+
     @Column(nullable = false, length = 32)
     @Builder.Default
     private String status = "UPLOADED"; // UPLOADED, PROCESSING, DONE, FAILED

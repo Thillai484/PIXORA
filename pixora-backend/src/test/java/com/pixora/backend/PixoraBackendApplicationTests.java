@@ -1,6 +1,7 @@
 package com.pixora.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pixora.backend.dto.ComplianceResult;
 import com.pixora.backend.dto.CustomizePhotoRequest;
 import com.pixora.backend.dto.PhotoPackRequest;
 import com.pixora.backend.entity.Photo;
@@ -10,6 +11,7 @@ import com.pixora.backend.repository.PhotoRepository;
 import com.pixora.backend.repository.PhotoRequestRepository;
 import com.pixora.backend.repository.UserRepository;
 import com.pixora.backend.service.AIService;
+import com.pixora.backend.service.ComplianceCheckService;
 import com.pixora.backend.service.StorageService;
 import com.pixora.backend.util.PromptBuilderUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -530,5 +532,68 @@ class PixoraBackendApplicationTests {
 		// Verify 2 distinct PhotoRequests were created for the same photo
 		List<PhotoRequest> requests = photoRequestRepository.findByPhotoId(photo.getId());
 		assertEquals(2, requests.size());
+	}
+
+	@Test
+	void complianceCheckServicePassesValidPassportPhoto() throws Exception {
+		ComplianceCheckService complianceCheckService = new ComplianceCheckService();
+
+		// Create a clean 600x600 pure white image with subject center
+		BufferedImage img = new BufferedImage(600, 600, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g = img.createGraphics();
+		g.setColor(Color.WHITE);
+		g.fillRect(0, 0, 600, 600);
+		// Draw subject torso and head
+		g.setColor(new Color(40, 50, 80));
+		g.fillOval(150, 100, 300, 420);
+		g.dispose();
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ImageIO.write(img, "jpg", baos);
+		byte[] imgBytes = baos.toByteArray();
+
+		Photo passportPhoto = Photo.builder()
+				.id(101L)
+				.mode("OFFICIAL")
+				.photoType("PASSPORT")
+				.country("US")
+				.build();
+
+		ComplianceResult result = complianceCheckService.evaluateCompliance(passportPhoto, imgBytes);
+
+		assertNotNull(result);
+		assertEquals("PASS", result.getOverallStatus());
+		assertEquals(100, result.getComplianceScore());
+		assertTrue(result.getChecks().stream().anyMatch(c -> "Background Purity".equals(c.getLabel()) && "PASS".equals(c.getStatus())));
+		assertTrue(result.getChecks().stream().anyMatch(c -> "Aspect Ratio & Dimensions".equals(c.getLabel()) && "PASS".equals(c.getStatus())));
+	}
+
+	@Test
+	void complianceCheckServiceFlagsOffWhiteBackground() throws Exception {
+		ComplianceCheckService complianceCheckService = new ComplianceCheckService();
+
+		// Create a 600x600 image with a dark gray background (#505050) instead of pure white
+		BufferedImage img = new BufferedImage(600, 600, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g = img.createGraphics();
+		g.setColor(new Color(80, 80, 80));
+		g.fillRect(0, 0, 600, 600);
+		g.dispose();
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ImageIO.write(img, "jpg", baos);
+		byte[] imgBytes = baos.toByteArray();
+
+		Photo passportPhoto = Photo.builder()
+				.id(102L)
+				.mode("OFFICIAL")
+				.photoType("PASSPORT")
+				.country("US")
+				.build();
+
+		ComplianceResult result = complianceCheckService.evaluateCompliance(passportPhoto, imgBytes);
+
+		assertNotNull(result);
+		assertTrue(result.getChecks().stream().anyMatch(c -> "Background Purity".equals(c.getLabel()) && "FAIL".equals(c.getStatus())));
+		assertEquals("FAIL", result.getOverallStatus());
 	}
 }

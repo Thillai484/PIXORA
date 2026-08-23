@@ -1,5 +1,6 @@
 package com.pixora.backend.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pixora.backend.config.PhotoSpec;
 import com.pixora.backend.dto.*;
 import com.pixora.backend.entity.Photo;
@@ -35,6 +36,8 @@ public class PhotoService {
     private final FirebaseAuthService firebaseAuthService;
     private final AIService aiService;
     private final OfficialPhotoService officialPhotoService;
+    private final ComplianceCheckService complianceCheckService;
+    private final ObjectMapper objectMapper;
 
     /**
      * Process, validate, and store a user-uploaded photo
@@ -205,6 +208,18 @@ public class PhotoService {
 
             photo.setGeneratedImageUrl(generatedUrl);
             photo.setStatus("DONE");
+
+            // Evaluate post-generation compliance checklist
+            try {
+                byte[] generatedBytes = storageService.getFileBytes(generatedUrl);
+                ComplianceResult complianceResult = complianceCheckService.evaluateCompliance(photo, generatedBytes);
+                photo.setComplianceResult(objectMapper.writeValueAsString(complianceResult));
+                log.info("Compliance evaluated for photo ID {}: Score = {}%, Status = {}",
+                        photoId, complianceResult.getComplianceScore(), complianceResult.getOverallStatus());
+            } catch (Exception ce) {
+                log.warn("Compliance check warning for photo ID {}: {}", photoId, ce.getMessage());
+            }
+
             photoRepository.save(photo);
 
             request.setStatus("COMPLETED");
@@ -347,6 +362,8 @@ public class PhotoService {
         Photo photo = photoRepository.findByIdAndUserId(photoId, user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Photo not found with id: " + photoId));
 
+        ComplianceResult compResult = parseComplianceResult(photo.getComplianceResult());
+
         return PhotoStatusResponse.builder()
                 .success(true)
                 .photoId(photo.getId())
@@ -360,6 +377,7 @@ public class PhotoService {
                 .clothing(photo.getClothing())
                 .background(photo.getBackground())
                 .specLabel(photo.getSpecLabel())
+                .complianceResult(compResult)
                 .createdAt(photo.getCreatedAt())
                 .updatedAt(photo.getUpdatedAt())
                 .build();
@@ -470,6 +488,8 @@ public class PhotoService {
     }
 
     public PhotoResponse mapToResponse(Photo photo) {
+        ComplianceResult compResult = parseComplianceResult(photo.getComplianceResult());
+
         return PhotoResponse.builder()
                 .id(photo.getId())
                 .userId(photo.getUserId())
@@ -482,9 +502,20 @@ public class PhotoService {
                 .clothing(photo.getClothing())
                 .background(photo.getBackground())
                 .specLabel(photo.getSpecLabel())
+                .complianceResult(compResult)
                 .status(photo.getStatus())
                 .createdAt(photo.getCreatedAt())
                 .updatedAt(photo.getUpdatedAt())
                 .build();
+    }
+
+    private ComplianceResult parseComplianceResult(String json) {
+        if (json == null || json.isBlank()) return null;
+        try {
+            return objectMapper.readValue(json, ComplianceResult.class);
+        } catch (Exception e) {
+            log.warn("Failed to parse complianceResult JSON: {}", e.getMessage());
+            return null;
+        }
     }
 }

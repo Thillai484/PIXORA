@@ -23,6 +23,7 @@ public class PhotoResponse {
     private String clothing;
     private String background;
     private String specLabel;
+    private ComplianceResult complianceResult;
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

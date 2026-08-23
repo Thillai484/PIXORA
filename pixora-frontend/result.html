@@ -112,6 +112,39 @@
                     <div class="meta-chip" id="meta-bg-chip"><span>🌆</span> <strong id="meta-bg">WHITE</strong></div>
                 </div>
 
+                <!-- Compliance Score & Biometric Verification Checklist -->
+                <div class="compliance-card" id="compliance-card" style="margin: 1.5rem 0; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.5rem; text-align: left; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.4rem;">🛡️</span>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.1rem; color: #fff; font-weight: 600;">Biometric & Spec Compliance Check</h3>
+                                <p id="compliance-summary" style="margin: 2px 0 0; font-size: 0.85rem; color: #94a3b8;">Automated specification and biometric verification report</p>
+                            </div>
+                        </div>
+                        <div id="compliance-score-badge" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+                            <span id="compliance-badge-icon">✓</span> <span id="compliance-score-val">100% COMPLIANT</span>
+                        </div>
+                    </div>
+
+                    <!-- Warning Banner (Conditional) -->
+                    <div id="compliance-warning-banner" style="display: none; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 10px; padding: 10px 14px; margin-bottom: 1rem; color: #fbbf24; font-size: 0.88rem; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.2rem;">⚠️</span>
+                        <div id="compliance-warning-text">This photo may not fully meet official document requirements — review the checklist below before submitting.</div>
+                    </div>
+
+                    <!-- Checklist Item Rows (Animated) -->
+                    <div class="compliance-checklist" id="compliance-checklist" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <!-- Items injected dynamically via JS with stagger animation -->
+                    </div>
+
+                    <!-- Authority Disclaimer -->
+                    <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.78rem; color: #64748b; display: flex; align-items: flex-start; gap: 8px;">
+                        <span>ℹ️</span>
+                        <span>Official Disclaimer: Pixora performs automated algorithmic compliance checks according to published ICAO and platform specifications. Always verify the specific requirements of your issuing authority.</span>
+                    </div>
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="result-actions">
                     <button type="button" id="btn-download" class="btn btn-primary btn-lg">
