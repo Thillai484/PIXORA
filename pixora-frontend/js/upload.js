@@ -109,6 +109,9 @@ document.addEventListener('DOMContentLoaded', () => {
             metaName.textContent = file.name;
             metaSize.textContent = formatBytes(file.size);
 
+            // Cache the user's actual photo preview locally
+            sessionStorage.setItem('pixora_local_preview', e.target.result);
+
             dropzone.style.display = 'none';
             previewContainer.style.display = 'flex';
         };
@@ -138,7 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.success && response.photoId) {
                 // Store active photo details in session
                 sessionStorage.setItem('pixora_current_photo_id', response.photoId);
-                sessionStorage.setItem('pixora_current_photo_url', response.originalImageUrl);
+                const localPreview = sessionStorage.getItem('pixora_local_preview');
+                sessionStorage.setItem('pixora_current_photo_url', localPreview || response.originalImageUrl);
 
                 // Redirect to customize step
                 window.location.href = `customize.html?photoId=${response.photoId}`;

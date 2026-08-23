@@ -155,10 +155,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         clearInterval(progressTimer);
         clearInterval(pollInterval);
 
-        currentGeneratedUrl = photoData.generatedImageUrl;
-
         // Set Images
-        beforeImg.src = photoData.originalImageUrl;
+        const localPreview = sessionStorage.getItem('pixora_local_preview');
+        beforeImg.src = localPreview || photoData.originalImageUrl;
         afterImg.src = photoData.generatedImageUrl;
 
         // Ensure before image width matches container for perfect overlay alignment

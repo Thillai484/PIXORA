@@ -35,8 +35,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Load photo preview thumbnail
     try {
+        const localPreview = sessionStorage.getItem('pixora_local_preview');
         const cachedUrl = sessionStorage.getItem('pixora_current_photo_url');
-        if (cachedUrl) {
+        
+        if (localPreview) {
+            sidebarPhotoImg.src = localPreview;
+        } else if (cachedUrl) {
             sidebarPhotoImg.src = cachedUrl;
         } else {
             const photo = await getPhoto(photoId);
