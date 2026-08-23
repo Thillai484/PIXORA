@@ -19,6 +19,8 @@ public class CustomizePhotoRequest {
 
     private String photoType; // RESUME, LINKEDIN, PASSPORT, VISA, COMPANY_ID, COLLEGE_ID
 
+    private String country; // US, SCHENGEN, UK, INDIA, GENERAL
+
     private String style; // CORPORATE, CREATIVE, STUDIO, MINIMAL
 
     private String clothing; // SUIT, BLAZER, FORMAL_SHIRT, CASUAL_SMART

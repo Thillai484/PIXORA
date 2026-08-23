@@ -18,9 +18,11 @@ public class PhotoResponse {
     private String generatedImageUrl;
     private String photoType;
     private String mode;
+    private String country;
     private String style;
     private String clothing;
     private String background;
+    private String specLabel;
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

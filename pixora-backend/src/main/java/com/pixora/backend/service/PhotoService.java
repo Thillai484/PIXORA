@@ -1,5 +1,6 @@
 package com.pixora.backend.service;
 
+import com.pixora.backend.config.PhotoSpec;
 import com.pixora.backend.dto.*;
 import com.pixora.backend.entity.Photo;
 import com.pixora.backend.entity.PhotoRequest;
@@ -85,9 +86,13 @@ public class PhotoService {
         String purpose = (request.getPhotoType() != null && !request.getPhotoType().isBlank())
                 ? request.getPhotoType().toUpperCase()
                 : "RESUME";
+        String country = (request.getCountry() != null && !request.getCountry().isBlank())
+                ? request.getCountry().toUpperCase()
+                : "US";
+
+        photo.setCountry(country);
 
         if ("OFFICIAL".equalsIgnoreCase(mode)) {
-            // Check if document preset vs professional preset
             boolean isBiometricDoc = "PASSPORT".equalsIgnoreCase(purpose) ||
                     "VISA".equalsIgnoreCase(purpose) ||
                     "COMPANY_ID".equalsIgnoreCase(purpose) ||
@@ -96,12 +101,11 @@ public class PhotoService {
             if (isBiometricDoc) {
                 photo.setMode("OFFICIAL");
                 photo.setPhotoType(purpose);
-                applyNormalizedOfficialAttributes(photo, purpose);
+                applyNormalizedOfficialAttributes(photo, purpose, country);
             } else {
-                // Resume and LinkedIn are Professional AI headshot presets
                 photo.setMode("PROFESSIONAL");
                 photo.setPhotoType(purpose);
-                applyNormalizedOfficialAttributes(photo, purpose);
+                applyNormalizedOfficialAttributes(photo, purpose, country);
             }
         } else {
             photo.setMode("PROFESSIONAL");
@@ -109,12 +113,14 @@ public class PhotoService {
             photo.setStyle(request.getStyle() != null ? request.getStyle().toUpperCase() : "CORPORATE");
             photo.setClothing(request.getClothing() != null ? request.getClothing().toUpperCase() : "BLAZER");
             photo.setBackground(request.getBackground() != null ? request.getBackground().toUpperCase() : "OFFICE");
+            photo.setSpecLabel("AI Studio Portrait • " + photo.getStyle() + " • " + photo.getClothing());
         }
 
         photo.setStatus("CONFIGURED");
         photo = photoRepository.save(photo);
 
-        log.info("Photo {} customized successfully with mode: {}, type: {}", photo.getId(), photo.getMode(), photo.getPhotoType());
+        log.info("Photo {} customized successfully with mode: {}, type: {}, spec: {}",
+                photo.getId(), photo.getMode(), photo.getPhotoType(), photo.getSpecLabel());
 
         return mapToResponse(photo);
     }
@@ -255,10 +261,11 @@ public class PhotoService {
                     .originalImageUrl(originalPhoto.getOriginalImageUrl())
                     .mode(isOfficial ? "OFFICIAL" : "PROFESSIONAL")
                     .photoType(preset)
+                    .country("US")
                     .status("PROCESSING")
                     .build();
 
-            applyNormalizedOfficialAttributes(packPhoto, preset);
+            applyNormalizedOfficialAttributes(packPhoto, preset, "US");
             packPhoto = photoRepository.save(packPhoto);
 
             PhotoRequest photoRequest = PhotoRequest.builder()
@@ -348,9 +355,11 @@ public class PhotoService {
                 .generatedImageUrl(photo.getGeneratedImageUrl())
                 .mode(photo.getMode())
                 .photoType(photo.getPhotoType())
+                .country(photo.getCountry())
                 .style(photo.getStyle())
                 .clothing(photo.getClothing())
                 .background(photo.getBackground())
+                .specLabel(photo.getSpecLabel())
                 .createdAt(photo.getCreatedAt())
                 .updatedAt(photo.getUpdatedAt())
                 .build();
@@ -416,30 +425,46 @@ public class PhotoService {
         return mapToResponse(photo);
     }
 
-    private void applyNormalizedOfficialAttributes(Photo photo, String purpose) {
+    private void applyNormalizedOfficialAttributes(Photo photo, String purpose, String country) {
+        PhotoSpec spec = PhotoSpec.resolve(purpose, country);
+
         switch (purpose) {
             case "PASSPORT":
-            case "VISA":
                 photo.setStyle("STUDIO");
                 photo.setClothing("FORMAL_SHIRT");
                 photo.setBackground("WHITE");
+                photo.setSpecLabel(spec.getSpecLabel());
+                break;
+            case "VISA":
+                photo.setStyle("STUDIO");
+                photo.setClothing("FORMAL_SHIRT");
+                photo.setBackground(spec == PhotoSpec.VISA_SCHENGEN ? "LIGHT_GRAY" : "WHITE");
+                photo.setSpecLabel(spec.getSpecLabel());
                 break;
             case "COMPANY_ID":
-            case "COLLEGE_ID":
                 photo.setStyle("STUDIO");
                 photo.setClothing("FORMAL_SHIRT");
                 photo.setBackground("LIGHT_GRAY");
+                photo.setSpecLabel(spec.getSpecLabel());
+                break;
+            case "COLLEGE_ID":
+                photo.setStyle("STUDIO");
+                photo.setClothing("FORMAL_SHIRT");
+                photo.setBackground("LIGHT_BLUE");
+                photo.setSpecLabel(spec.getSpecLabel());
                 break;
             case "LINKEDIN":
                 photo.setStyle("CORPORATE");
                 photo.setClothing("BLAZER");
                 photo.setBackground("OFFICE");
+                photo.setSpecLabel("Executive Networking Headshot • Soft Office Bokeh");
                 break;
             case "RESUME":
             default:
                 photo.setStyle("CORPORATE");
                 photo.setClothing("BLAZER");
                 photo.setBackground("STUDIO");
+                photo.setSpecLabel("Corporate Resume Headshot • Dark Blazer & Studio Lighting");
                 break;
         }
     }
@@ -452,9 +477,11 @@ public class PhotoService {
                 .generatedImageUrl(photo.getGeneratedImageUrl())
                 .photoType(photo.getPhotoType())
                 .mode(photo.getMode())
+                .country(photo.getCountry())
                 .style(photo.getStyle())
                 .clothing(photo.getClothing())
                 .background(photo.getBackground())
+                .specLabel(photo.getSpecLabel())
                 .status(photo.getStatus())
                 .createdAt(photo.getCreatedAt())
                 .updatedAt(photo.getUpdatedAt())

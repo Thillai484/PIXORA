@@ -39,6 +39,9 @@ public class Photo {
     private String mode; // OFFICIAL, PROFESSIONAL
 
     @Column(length = 64)
+    private String country; // US, SCHENGEN, UK, INDIA, GENERAL
+
+    @Column(length = 64)
     private String style;
 
     @Column(length = 64)
@@ -46,6 +49,9 @@ public class Photo {
 
     @Column(length = 64)
     private String background;
+
+    @Column(length = 256)
+    private String specLabel;
 
     @Column(nullable = false, length = 32)
     @Builder.Default

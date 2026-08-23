@@ -73,11 +73,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Preset Cards Click Selection (Official Mode)
     const presetCards = document.querySelectorAll('.preset-card');
+    const visaCountryContainer = document.getElementById('visa-country-container');
+    const visaCountrySelect = document.getElementById('visa-country-select');
+
     presetCards.forEach(card => {
         card.addEventListener('click', () => {
             presetCards.forEach(c => c.classList.remove('active'));
             card.classList.add('active');
             currentPurpose = card.getAttribute('data-type');
+
+            // Show country dropdown for Visa preset
+            if (currentPurpose === 'VISA') {
+                visaCountryContainer.style.display = 'flex';
+            } else {
+                visaCountryContainer.style.display = 'none';
+            }
         });
     });
 
@@ -112,6 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 photoId: photoId,
                 mode: currentMode,
                 photoType: currentMode === 'OFFICIAL' ? currentPurpose : 'PROFESSIONAL_CUSTOM',
+                country: (currentMode === 'OFFICIAL' && currentPurpose === 'VISA' && visaCountrySelect) ? visaCountrySelect.value : 'US',
                 style: currentMode === 'OFFICIAL' ? null : currentStyle,
                 clothing: currentMode === 'OFFICIAL' ? null : currentClothing,
                 background: currentMode === 'OFFICIAL' ? null : currentBackground
@@ -124,7 +135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             sessionStorage.setItem('pixora_customization', JSON.stringify(payload));
             sessionStorage.setItem('pixora_current_photo_id', photoId);
 
-            // Redirect to result page (Phase 6 AI generation)
+            // Redirect to result page
             window.location.href = `result.html?photoId=${photoId}`;
         } catch (error) {
             console.error('Customization failed:', error);

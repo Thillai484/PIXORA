@@ -170,6 +170,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         metaClothing.textContent = (photoData.clothing || 'FORMAL SHIRT').replace('_', ' ');
         metaBg.textContent = (photoData.background || 'STUDIO').replace('_', ' ');
 
+        // Populate Spec Applied Banner
+        const specAppliedText = document.getElementById('spec-applied-text');
+        if (specAppliedText) {
+            if (photoData.specLabel) {
+                specAppliedText.textContent = photoData.specLabel;
+            } else if (photoData.photoType === 'PASSPORT') {
+                specAppliedText.textContent = '2x2 in (51x51mm) • Pure White #FFFFFF • ICAO Compliant';
+            } else if (photoData.photoType === 'VISA') {
+                const country = (photoData.country || 'US').toUpperCase();
+                if (country === 'SCHENGEN') {
+                    specAppliedText.textContent = 'Schengen Visa (35x45mm) • Light Gray #F4F4F4 • High Contrast';
+                } else if (country === 'UK') {
+                    specAppliedText.textContent = 'UK Visa (35x45mm) • Off-White #F0F0F0 • Biometric Spec';
+                } else {
+                    specAppliedText.textContent = 'US / India Visa (2x2 in) • Pure White #FFFFFF • Consular Sharpness';
+                }
+            } else if (photoData.photoType === 'COMPANY_ID') {
+                specAppliedText.textContent = 'Standard ID Badge (3:4) • Light Gray #E8E8E8 • Shoulders-Up Crop';
+            } else if (photoData.photoType === 'COLLEGE_ID') {
+                specAppliedText.textContent = 'Student ID (4:5) • Soft Light-Blue #EBF3FA • Natural Framing';
+            } else if (photoData.photoType === 'RESUME') {
+                specAppliedText.textContent = 'Corporate Resume Headshot • Dark Navy Blazer • Studio Lighting';
+            } else if (photoData.photoType === 'LINKEDIN') {
+                specAppliedText.textContent = 'Executive Networking Profile • Soft Office Bokeh';
+            } else {
+                specAppliedText.textContent = 'AI Studio Portrait • ' + (photoData.clothing || 'Blazer') + ' • ' + (photoData.style || 'Corporate');
+            }
+        }
+
         // Update Page Titles
         titleEl.textContent = 'Your Professional Photo is Ready ✨';
         subtitleEl.textContent = 'Drag the slider to compare your original photo with your new AI studio portrait.';

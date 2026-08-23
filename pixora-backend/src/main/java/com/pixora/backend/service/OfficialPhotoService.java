@@ -26,13 +26,13 @@ public class OfficialPhotoService {
     private final StorageService storageService;
 
     /**
-     * Process official document photo with exact specifications per document type
+     * Process official document photo with exact specifications per document type & country
      */
     public String processOfficialPhoto(Photo photo) throws Exception {
-        PhotoSpec spec = PhotoSpec.fromType(photo.getPhotoType());
-        log.info("Executing Official Document Pipeline for photo ID {} with spec: {} ({}x{}, bg: #{})",
+        PhotoSpec spec = PhotoSpec.resolve(photo.getPhotoType(), photo.getCountry());
+        log.info("Executing Official Document Pipeline for photo ID {} with spec: {} ({}x{}, bg: #{}, label: '{}')",
                 photo.getId(), spec.name(), spec.getWidth(), spec.getHeight(),
-                Integer.toHexString(spec.getBackgroundColor().getRGB() & 0x00FFFFFF));
+                Integer.toHexString(spec.getBackgroundColor().getRGB() & 0x00FFFFFF), spec.getSpecLabel());
 
         byte[] originalBytes = storageService.getFileBytes(photo.getOriginalImageUrl());
         if (originalBytes == null || originalBytes.length == 0) {
@@ -44,7 +44,7 @@ public class OfficialPhotoService {
             throw new IllegalArgumentException("Invalid image format for official photo processing");
         }
 
-        // 1. Crop and isolate subject with background removal & exact framing
+        // 1. Render photo according to exact PhotoSpec parameters
         BufferedImage outputImg = renderOfficialDocumentPhoto(sourceImg, spec);
 
         // 2. Encode to high-quality JPEG
@@ -60,7 +60,7 @@ public class OfficialPhotoService {
     }
 
     /**
-     * Render deterministic official document photo with ICAO face framing and solid background
+     * Render deterministic official document photo with exact PhotoSpec framing, solid background & tone filters
      */
     private BufferedImage renderOfficialDocumentPhoto(BufferedImage src, PhotoSpec spec) {
         int targetW = spec.getWidth();
@@ -74,27 +74,28 @@ public class OfficialPhotoService {
         g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         g.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
 
-        // 1. Solid background composite (Pure White #FFFFFF for Passport/Visa, #F0F0F0 for Company ID, #E8E8E8 for College ID)
+        // 1. Solid background composite per exact spec color (#FFFFFF, #F4F4F4, #E8E8E8, #EBF3FA)
         g.setColor(spec.getBackgroundColor());
         g.fillRect(0, 0, targetW, targetH);
 
-        // 2. Extract segmented foreground with edge alpha matting
+        // 2. Extract segmented foreground with soft edge alpha matting
         BufferedImage segmentedSubject = extractSubjectWithMatting(src, spec.getBackgroundColor());
 
-        // 3. Center and position according to ICAO face framing ratio
+        // 3. Scale and position subject based on spec framing rules
         int srcW = segmentedSubject.getWidth();
         int srcH = segmentedSubject.getHeight();
 
-        // Calculate scaling to satisfy faceHeightRatio
-        double scale = Math.max((double) targetW / srcW, (double) targetH / srcH);
+        double scale = Math.max((double) targetW / srcW, (double) targetH / srcH) * (spec.getFaceHeightRatio() / 0.70f);
         int drawW = (int) (srcW * scale);
         int drawH = (int) (srcH * scale);
         int drawX = (targetW - drawW) / 2;
-        int drawY = (int) ((targetH - drawH) * (spec == PhotoSpec.PASSPORT || spec == PhotoSpec.VISA ? 0.25 : 0.40));
+        int drawY = (int) ((targetH - drawH) * spec.getTopMarginRatio());
 
-        // Light color/contrast balance
+        // 4. Apply spec-specific contrast, sharpness, and warmth filters
         try {
-            RescaleOp contrastOp = new RescaleOp(1.04f, 4.0f, null);
+            float contrast = spec.getContrastMultiplier();
+            float warmth = spec.getWarmthOffset();
+            RescaleOp contrastOp = new RescaleOp(contrast, warmth, null);
             segmentedSubject = contrastOp.filter(segmentedSubject, null);
         } catch (Exception ignored) {}
 
@@ -113,7 +114,7 @@ public class OfficialPhotoService {
 
         BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 
-        // Sample background color from top-left, top-right, and top perimeter
+        // Sample background color from top corners & top center
         int corner1 = src.getRGB(2, 2);
         int corner2 = src.getRGB(w - 3, 2);
         int corner3 = src.getRGB(w / 2, 2);
@@ -135,7 +136,7 @@ public class OfficialPhotoService {
                 int g = (rgb >> 8) & 0xFF;
                 int b = rgb & 0xFF;
 
-                // Color distance from sampled perimeter background
+                // Color distance from sampled background
                 double colorDist = Math.sqrt((r - bgR) * (r - bgR) + (g - bgG) * (g - bgG) + (b - bgB) * (b - bgB));
 
                 // Geometric distance from head center
@@ -144,18 +145,16 @@ public class OfficialPhotoService {
                 double geoDistSq = dx * dx + dy * dy;
 
                 if (geoDistSq <= 1.0) {
-                    // Definite foreground subject (head / torso)
+                    // Forehead / face / torso
                     result.setRGB(x, y, (0xFF << 24) | (r << 16) | (g << 8) | b);
-                } else if (geoDistSq <= 1.6 && colorDist > 28) {
-                    // Subject boundary / hair with feathered alpha
+                } else if (geoDistSq <= 1.6 && colorDist > 26) {
+                    // Hair boundary / shoulders with soft alpha feather
                     double alphaFactor = Math.min(1.0, (1.6 - geoDistSq) / 0.6);
                     int alpha = (int) (255 * alphaFactor);
                     result.setRGB(x, y, (alpha << 24) | (r << 16) | (g << 8) | b);
                 } else if (colorDist < 25) {
-                    // Pure background -> transparent
                     result.setRGB(x, y, 0x00000000);
                 } else {
-                    // Outer background perimeter
                     result.setRGB(x, y, 0x00000000);
                 }
             }
