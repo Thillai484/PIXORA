@@ -16,12 +16,14 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -49,6 +51,18 @@ class PixoraBackendApplicationTests {
 		photoRequestRepository.deleteAll();
 		photoRepository.deleteAll();
 		userRepository.deleteAll();
+	}
+
+	private byte[] createTestImageBytes(String format) throws Exception {
+		BufferedImage image = new BufferedImage(120, 120, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g = image.createGraphics();
+		g.setColor(Color.BLUE);
+		g.fillRect(0, 0, 120, 120);
+		g.dispose();
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ImageIO.write(image, format, baos);
+		return baos.toByteArray();
 	}
 
 	@Test
@@ -135,6 +149,64 @@ class PixoraBackendApplicationTests {
 	}
 
 	@Test
+	void photoUploadFlowSucceedsWithValidImage() throws Exception {
+		byte[] validJpeg = createTestImageBytes("jpg");
+		MockMultipartFile file = new MockMultipartFile(
+				"file",
+				"portrait.jpg",
+				"image/jpeg",
+				validJpeg
+		);
+
+		mockMvc.perform(multipart("/api/photos/upload")
+						.file(file)
+						.header("Authorization", "Bearer test-token-carol"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.photoId").isNumber())
+				.andExpect(jsonPath("$.status").value("UPLOADED"))
+				.andExpect(jsonPath("$.originalImageUrl").isNotEmpty());
+
+		List<Photo> photos = photoRepository.findAll();
+		assertEquals(1, photos.size());
+		assertEquals("UPLOADED", photos.get(0).getStatus());
+	}
+
+	@Test
+	void photoUploadRejectsInvalidNonImage() throws Exception {
+		MockMultipartFile fakeFile = new MockMultipartFile(
+				"file",
+				"bad-file.txt",
+				"text/plain",
+				"This is definitely not an image".getBytes()
+		);
+
+		mockMvc.perform(multipart("/api/photos/upload")
+						.file(fakeFile)
+						.header("Authorization", "Bearer test-token-dave"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.success").value(false))
+				.andExpect(jsonPath("$.errorCode").value("UNSUPPORTED_FORMAT"));
+	}
+
+	@Test
+	void photoUploadRejectsUnauthenticated() throws Exception {
+		byte[] validJpeg = createTestImageBytes("jpg");
+		MockMultipartFile file = new MockMultipartFile(
+				"file",
+				"portrait.jpg",
+				"image/jpeg",
+				validJpeg
+		);
+
+		mockMvc.perform(multipart("/api/photos/upload")
+						.file(file))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.success").value(false))
+				.andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
+	}
+
+	@Test
 	void testStorageServiceUploadAndTestController() throws Exception {
 		MockMultipartFile sampleFile = new MockMultipartFile(
 				"file",
@@ -150,5 +222,4 @@ class PixoraBackendApplicationTests {
 				.andExpect(jsonPath("$.filename").value("test-portrait.jpg"))
 				.andExpect(jsonPath("$.publicUrl").isNotEmpty());
 	}
-
 }

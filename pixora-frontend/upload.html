@@ -4,60 +4,119 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Photo — Pixora</title>
-    <meta name="description" content="Upload your photo to start creating a professional portrait.">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%22100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
 </head>
 <body>
+    <!-- Ambient Background -->
     <div class="ambient-bg">
         <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
         <div class="orb orb-3"></div>
     </div>
 
+    <!-- Header -->
     <header>
         <div class="nav-container">
             <a href="index.html" class="logo">
-                <span class="logo-icon">✦</span>
+                <span class="logo-icon">✨</span>
                 <span class="logo-text">Pixora</span>
             </a>
-            <nav>
-                <ul class="nav-links">
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="my-photos.html">My Photos</a></li>
-                    <li><a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a></li>
-                </ul>
-            </nav>
+            <ul class="nav-links">
+                <li><a href="index.html#how-it-works">How It Works</a></li>
+                <li><a href="upload.html" style="color: var(--accent-light); font-weight: 600;">Upload</a></li>
+                <li><a href="my-photos.html">My Photos</a></li>
+                <li id="nav-auth-container">
+                    <a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a>
+                </li>
+            </ul>
         </div>
     </header>
 
-    <main class="container">
-        <div class="placeholder-card reveal active">
-            <h2>Upload Your Photo</h2>
-            <p>Upload a clear photo or selfie to transform into a studio-quality professional shot.</p>
-            <a href="customize.html" class="btn btn-primary">Continue to Customize (Phase 4)</a>
+    <!-- Main Upload Section -->
+    <main>
+        <div class="container upload-container">
+            <div class="upload-header">
+                <span class="hero-pill">Step 1 of 3</span>
+                <h1 class="upload-title">Upload Your Photo</h1>
+                <p class="upload-subtitle">Choose a clear photo of yourself. Any casual selfie or headshot works great.</p>
+            </div>
+
+            <div class="upload-card">
+                <!-- Validation & Error Alert -->
+                <div id="upload-alert" class="auth-alert error"></div>
+
+                <!-- Dropzone State -->
+                <div id="dropzone" class="dropzone">
+                    <div class="dropzone-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <div class="dropzone-text">Drag & drop your photo here</div>
+                    <div class="dropzone-hint">Supports JPG, PNG, WEBP up to 10MB</div>
+                    <button type="button" id="browse-btn" class="btn btn-secondary btn-sm">
+                        Browse File
+                    </button>
+                    <input type="file" id="file-input" class="hidden-input" accept="image/jpeg,image/png,image/jpg,image/webp">
+                </div>
+
+                <!-- Preview State (Hidden by default) -->
+                <div id="preview-container" class="preview-container">
+                    <div class="preview-wrapper">
+                        <img id="preview-image" class="preview-img" src="" alt="Photo Preview">
+                    </div>
+                    <div class="preview-meta">
+                        <span id="meta-name" class="preview-pill">filename.jpg</span>
+                        <span id="meta-size" class="preview-pill">1.2 MB</span>
+                        <span id="meta-dim" class="preview-pill">1200 x 1600 px</span>
+                    </div>
+                    <div class="upload-actions">
+                        <button type="button" id="change-photo-btn" class="btn btn-secondary">
+                            Change Photo
+                        </button>
+                        <button type="button" id="continue-btn" class="btn btn-primary btn-lg">
+                            Continue to Customize &rarr;
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Uploading State (Hidden by default) -->
+                <div id="uploading-state" class="uploading-state">
+                    <div class="spinner" style="width: 44px; height: 44px; border-width: 4px;"></div>
+                    <div class="uploading-text">Uploading and validating your photo...</div>
+                    <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 0.5rem;">
+                        This will only take a moment.
+                    </p>
+                </div>
+            </div>
         </div>
     </main>
 
+    <!-- Footer -->
     <footer>
         <div class="footer-container">
-            <div class="footer-copy">
-                &copy; 2026 Pixora. AI-Powered Professional Photo Studio.
-            </div>
+            <p class="footer-copy">&copy; 2026 Pixora. AI-Powered Professional Photo Studio.</p>
             <ul class="footer-links">
                 <li><a href="index.html">Home</a></li>
+                <li><a href="upload.html">Upload</a></li>
                 <li><a href="my-photos.html">My Photos</a></li>
             </ul>
         </div>
     </footer>
 
+    <!-- Scripts -->
     <script type="module">
         import { requireAuth, initNavAuth } from './js/auth.js';
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Require authentication before accessing upload
-            if (requireAuth()) {
-                initNavAuth();
-            }
-        });
+        
+        // Guard route - redirect to login if unauthenticated
+        const isAuthed = requireAuth();
+        if (isAuthed) {
+            initNavAuth();
+        }
     </script>
+    <script type="module" src="js/upload.js"></script>
 </body>
 </html>

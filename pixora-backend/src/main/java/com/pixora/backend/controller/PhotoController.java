@@ -1,21 +1,55 @@
 package com.pixora.backend.controller;
 
 import com.pixora.backend.dto.FirebaseUserPrincipal;
+import com.pixora.backend.dto.PhotoResponse;
+import com.pixora.backend.dto.PhotoUploadResponse;
+import com.pixora.backend.service.PhotoService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/photos")
+@RequiredArgsConstructor
 public class PhotoController {
 
+    private final PhotoService photoService;
+
     /**
-     * Protected endpoint to verify authentication and retrieve user status
+     * Upload an original user photo for processing
+     */
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PhotoUploadResponse> uploadPhoto(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+        PhotoUploadResponse response = photoService.uploadPhoto(principal, file);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get details of a specific photo by ID
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<PhotoResponse> getPhoto(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @PathVariable Long id
+    ) {
+        PhotoResponse response = photoService.getPhotoById(id, principal.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Protected health/status check
      */
     @GetMapping("/status")
     public ResponseEntity<?> getPhotoServiceStatus(@AuthenticationPrincipal FirebaseUserPrincipal principal) {

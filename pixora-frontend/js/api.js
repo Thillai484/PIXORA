@@ -64,3 +64,43 @@ export async function apiFetch(endpoint, options = {}) {
 
     return response;
 }
+
+/**
+ * Upload Photo API
+ */
+export async function uploadPhoto(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = sessionStorage.getItem('pixora_token');
+    const headers = {
+        'Accept': 'application/json'
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${BASE_URL}/photos/upload`, {
+        method: 'POST',
+        headers,
+        body: formData
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || 'Upload failed');
+    }
+    return data;
+}
+
+/**
+ * Get Photo Details API
+ */
+export async function getPhoto(photoId) {
+    const response = await apiFetch(`/photos/${photoId}`);
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch photo');
+    }
+    return data;
+}

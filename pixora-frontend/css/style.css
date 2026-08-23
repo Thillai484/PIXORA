@@ -256,14 +256,20 @@ header {
     box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(99, 102, 241, 0.55);
     color: #ffffff;
 }
 
-.btn-primary:active {
+.btn-primary:active:not(:disabled) {
     transform: translateY(0) scale(0.98);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
 }
 
 .btn-secondary {
@@ -293,6 +299,11 @@ header {
     font-size: 1.05rem;
 }
 
+.btn-sm {
+    padding: 0.45rem 1rem;
+    font-size: 0.85rem;
+}
+
 /* Google Sign-in Button */
 .btn-google {
     background: #ffffff;
@@ -311,10 +322,6 @@ header {
     background: #f8fafc;
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-}
-
-.btn-google:active {
-    transform: scale(0.98);
 }
 
 .google-icon {
@@ -410,6 +417,164 @@ main {
     color: var(--text-muted);
     margin-top: 2rem;
     line-height: 1.5;
+}
+
+/* Upload Flow Styles */
+.upload-container {
+    max-width: 680px;
+    margin: 3.5rem auto 4rem;
+}
+
+.upload-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.upload-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+}
+
+.upload-subtitle {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+}
+
+.upload-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(16px);
+}
+
+/* Dropzone */
+.dropzone {
+    border: 2px dashed rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+    background: rgba(15, 23, 42, 0.5);
+    padding: 3.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+}
+
+.dropzone:hover, .dropzone.dragover {
+    border-color: var(--accent);
+    background: rgba(99, 102, 241, 0.06);
+    box-shadow: var(--accent-glow);
+}
+
+.dropzone-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.15);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-light);
+    margin-bottom: 1.25rem;
+}
+
+.dropzone-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+}
+
+.dropzone-hint {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+}
+
+.hidden-input {
+    display: none;
+}
+
+/* Preview Zone */
+.preview-container {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+}
+
+.preview-wrapper {
+    position: relative;
+    max-width: 320px;
+    width: 100%;
+    margin-bottom: 1.5rem;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border-highlight);
+    box-shadow: var(--shadow-md);
+}
+
+.preview-img {
+    width: 100%;
+    height: auto;
+    max-height: 380px;
+    object-fit: cover;
+    display: block;
+}
+
+.preview-meta {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.preview-pill {
+    font-size: 0.8rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+}
+
+.upload-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.75rem;
+}
+
+/* Spinner */
+.spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.uploading-state {
+    display: none;
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.uploading-text {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-top: 1rem;
+    color: var(--accent-light);
 }
 
 /* Hero Section */
@@ -770,6 +935,28 @@ main {
     color: var(--text-secondary);
 }
 
+/* Placeholder Page Cards */
+.placeholder-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 3rem 2rem;
+    text-align: center;
+    max-width: 600px;
+    margin: 3rem auto;
+    box-shadow: var(--shadow-lg);
+}
+
+.placeholder-card h2 {
+    font-size: 1.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.placeholder-card p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
 /* CTA Banner Section */
 .cta-banner {
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
@@ -906,5 +1093,8 @@ footer {
     .footer-container {
         flex-direction: column;
         text-align: center;
+    }
+    .upload-card {
+        padding: 1.5rem;
     }
 }
