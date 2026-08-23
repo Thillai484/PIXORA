@@ -5,6 +5,7 @@ import com.pixora.backend.service.PhotoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -84,6 +85,21 @@ public class PhotoController {
     ) {
         PhotoStatusResponse response = photoService.getPhotoStatus(principal, id);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Download generated photo as an image attachment
+     */
+    @GetMapping("/{id}/download")
+    public ResponseEntity<byte[]> downloadPhoto(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @PathVariable Long id
+    ) {
+        byte[] imageBytes = photoService.downloadPhoto(principal, id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"pixora-portrait-" + id + ".png\"")
+                .contentType(MediaType.IMAGE_PNG)
+                .body(imageBytes);
     }
 
     /**

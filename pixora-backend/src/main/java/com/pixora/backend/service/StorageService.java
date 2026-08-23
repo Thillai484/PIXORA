@@ -109,6 +109,40 @@ public class StorageService {
     }
 
     /**
+     * Retrieve file bytes from URL or local storage fallback
+     */
+    public byte[] getFileBytes(String fileUrl) {
+        try {
+            if (fileUrl == null || fileUrl.isBlank()) {
+                return new byte[0];
+            }
+
+            if (fileUrl.contains("/storage/photos/")) {
+                String subPath = fileUrl.substring(fileUrl.indexOf("/storage/photos/") + "/storage/photos/".length());
+                Path localPath = Paths.get("target", "storage", BUCKET_NAME, subPath);
+                if (Files.exists(localPath)) {
+                    return Files.readAllBytes(localPath);
+                }
+            }
+
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(fileUrl))
+                    .GET()
+                    .timeout(Duration.ofSeconds(20))
+                    .build();
+
+            HttpResponse<byte[]> res = httpClient.send(req, HttpResponse.BodyHandlers.ofByteArray());
+            if (res.statusCode() >= 200 && res.statusCode() < 300) {
+                return res.body();
+            }
+            return new byte[0];
+        } catch (Exception e) {
+            log.warn("Failed to get file bytes from {}: {}", fileUrl, e.getMessage());
+            return new byte[0];
+        }
+    }
+
+    /**
      * Delete files from Supabase Storage
      */
     public void deleteFile(String objectPath) {

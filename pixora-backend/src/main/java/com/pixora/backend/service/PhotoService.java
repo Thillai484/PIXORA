@@ -32,13 +32,9 @@ public class PhotoService {
      */
     @Transactional
     public PhotoUploadResponse uploadPhoto(FirebaseUserPrincipal principal, MultipartFile file) throws IOException {
-        // 1. Strict image validation
         BufferedImage image = ImageValidationUtil.validateImage(file);
-
-        // 2. Ensure user is synchronized with database
         UserResponse user = firebaseAuthService.syncGoogleUser(principal);
 
-        // 3. Upload file bytes to Supabase Storage
         String publicUrl = storageService.uploadOriginalPhoto(
                 user.getId(),
                 file.getOriginalFilename(),
@@ -46,7 +42,6 @@ public class PhotoService {
                 file.getContentType()
         );
 
-        // 4. Create and persist Photo entity in database
         Photo photo = Photo.builder()
                 .userId(user.getId())
                 .originalImageUrl(publicUrl)
@@ -137,7 +132,6 @@ public class PhotoService {
         Photo photo = photoRepository.findByIdAndUserId(photoId, user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Photo not found or does not belong to user with id: " + photoId));
 
-        // Create PhotoRequest row (status: PROCESSING)
         PhotoRequest photoRequest = PhotoRequest.builder()
                 .userId(user.getId())
                 .photoId(photo.getId())
@@ -147,14 +141,12 @@ public class PhotoService {
 
         photoRequest = photoRequestRepository.save(photoRequest);
 
-        // Update photo status to PROCESSING
         photo.setStatus("PROCESSING");
         photoRepository.save(photo);
 
         final Long finalPhotoId = photo.getId();
         final Long finalRequestId = photoRequest.getId();
 
-        // Dispatch async background generation
         CompletableFuture.runAsync(() -> aiService.processGeneration(finalPhotoId, finalRequestId));
 
         log.info("Dispatched async AI generation for photo ID {}", photoId);
@@ -192,6 +184,19 @@ public class PhotoService {
                 .createdAt(photo.getCreatedAt())
                 .updatedAt(photo.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * Download generated image bytes for high-res download
+     */
+    @Transactional(readOnly = true)
+    public byte[] downloadPhoto(FirebaseUserPrincipal principal, Long photoId) {
+        UserResponse user = firebaseAuthService.syncGoogleUser(principal);
+        Photo photo = photoRepository.findByIdAndUserId(photoId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Photo not found with id: " + photoId));
+
+        String targetUrl = photo.getGeneratedImageUrl() != null ? photo.getGeneratedImageUrl() : photo.getOriginalImageUrl();
+        return storageService.getFileBytes(targetUrl);
     }
 
     /**

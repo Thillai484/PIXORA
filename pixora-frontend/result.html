@@ -3,61 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Generated Photo — Pixora</title>
-    <meta name="description" content="View and download your generated professional portrait.">
+    <title>Your Professional Photo — Pixora</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%22100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
 </head>
 <body>
+    <!-- Ambient Background -->
     <div class="ambient-bg">
         <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
         <div class="orb orb-3"></div>
     </div>
 
+    <!-- Header -->
     <header>
         <div class="nav-container">
             <a href="index.html" class="logo">
-                <span class="logo-icon">✦</span>
+                <span class="logo-icon">✨</span>
                 <span class="logo-text">Pixora</span>
             </a>
-            <nav>
-                <ul class="nav-links">
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="upload.html">Upload</a></li>
-                    <li><a href="my-photos.html">My Photos</a></li>
-                    <li><a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a></li>
-                </ul>
-            </nav>
+            <ul class="nav-links">
+                <li><a href="index.html#how-it-works">How It Works</a></li>
+                <li><a href="upload.html">Upload</a></li>
+                <li><a href="my-photos.html">My Photos</a></li>
+                <li id="nav-auth-container">
+                    <a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a>
+                </li>
+            </ul>
         </div>
     </header>
 
-    <main class="container">
-        <div class="placeholder-card reveal active">
-            <h2>Your Result</h2>
-            <p>Compare before/after and download your high-resolution studio photo.</p>
-            <a href="my-photos.html" class="btn btn-secondary">Go to My Photos (Phase 7)</a>
+    <!-- Main Result Content -->
+    <main>
+        <div class="container result-container">
+            <div class="upload-header">
+                <span class="hero-pill">Step 3 of 3 • Studio Result</span>
+                <h1 id="result-page-title" class="upload-title">Transforming Your Portrait</h1>
+                <p id="result-page-subtitle" class="upload-subtitle">Pixora AI is crafting your studio-quality photograph.</p>
+            </div>
+
+            <!-- View 1: Generating Loading State -->
+            <div id="view-loading" class="loading-view-card">
+                <div class="pulsing-ai-orb">✨</div>
+                <h2 id="loading-step-title" class="loading-heading">Analyzing Face Geometry...</h2>
+                <p class="loading-subtitle">Applying studio lighting, neutral background, and tailored attire.</p>
+
+                <div class="progress-track">
+                    <div id="progress-bar-fill" class="progress-bar-fill"></div>
+                </div>
+
+                <div class="steps-tracker">
+                    <div id="step-1" class="tracker-item active">
+                        <span class="tracker-dot"></span>
+                        <span>1. Analyzing face geometry and contours</span>
+                    </div>
+                    <div id="step-2" class="tracker-item">
+                        <span class="tracker-dot"></span>
+                        <span>2. Setting up studio key lighting & background</span>
+                    </div>
+                    <div id="step-3" class="tracker-item">
+                        <span class="tracker-dot"></span>
+                        <span>3. Synthesizing tailored attire & natural textures</span>
+                    </div>
+                    <div id="step-4" class="tracker-item">
+                        <span class="tracker-dot"></span>
+                        <span>4. Finalizing 8K UHD photorealistic portrait</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View 2: Generated Result (Before/After Slider) -->
+            <div id="view-result" class="result-card" style="display: none;">
+                <!-- Before/After Slider -->
+                <div class="comparison-wrapper" id="comparison-slider">
+                    <!-- Layer 1: AI Generated (After) -->
+                    <div class="img-layer after-layer">
+                        <img id="after-img" src="" alt="Pixora AI Generated Portrait">
+                    </div>
+
+                    <!-- Layer 2: Original (Before) -->
+                    <div class="img-layer before-layer" id="before-layer">
+                        <img id="before-img" src="" alt="Original Uploaded Portrait">
+                    </div>
+
+                    <!-- Floating Badges -->
+                    <span class="slider-badge badge-original">Original</span>
+                    <span class="slider-badge badge-pixora">Pixora AI</span>
+
+                    <!-- Drag Handle -->
+                    <div class="slider-handle" id="slider-handle">
+                        <div class="slider-handle-btn">⇄</div>
+                    </div>
+                </div>
+
+                <!-- Photo Metadata Badges -->
+                <div class="metadata-container" id="meta-container">
+                    <div class="meta-chip"><span>🎯</span> <strong id="meta-mode">OFFICIAL</strong></div>
+                    <div class="meta-chip"><span>📄</span> <strong id="meta-type">PASSPORT</strong></div>
+                    <div class="meta-chip" id="meta-clothing-chip"><span>👔</span> <strong id="meta-clothing">FORMAL SHIRT</strong></div>
+                    <div class="meta-chip" id="meta-bg-chip"><span>🌆</span> <strong id="meta-bg">WHITE</strong></div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="result-actions">
+                    <button type="button" id="btn-download" class="btn btn-primary btn-lg">
+                        <span>📥 Download HD Photo</span>
+                    </button>
+                    <a href="#" id="btn-re-customize" class="btn btn-secondary btn-lg">
+                        <span>🎨 Try Different Style</span>
+                    </a>
+                    <a href="upload.html" class="btn btn-secondary btn-lg">
+                        <span>➕ Upload New</span>
+                    </a>
+                    <a href="my-photos.html" class="btn btn-secondary btn-lg">
+                        <span>🖼️ My Photos</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- View 3: Error State -->
+            <div id="view-error" class="error-view-card" style="display: none;">
+                <div class="error-icon">⚠️</div>
+                <h2 class="loading-heading">Generation Failed</h2>
+                <p id="error-message" class="loading-subtitle">We encountered an issue while generating your portrait.</p>
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                    <button type="button" id="btn-retry" class="btn btn-primary">Try Again</button>
+                    <a href="upload.html" class="btn btn-secondary">Upload Another</a>
+                </div>
+            </div>
         </div>
     </main>
 
+    <!-- Footer -->
     <footer>
         <div class="footer-container">
-            <div class="footer-copy">
-                &copy; 2026 Pixora. AI-Powered Professional Photo Studio.
-            </div>
+            <p class="footer-copy">&copy; 2026 Pixora. AI-Powered Professional Photo Studio.</p>
             <ul class="footer-links">
                 <li><a href="index.html">Home</a></li>
+                <li><a href="upload.html">Upload</a></li>
                 <li><a href="my-photos.html">My Photos</a></li>
             </ul>
         </div>
     </footer>
 
+    <!-- Scripts -->
     <script type="module">
         import { requireAuth, initNavAuth } from './js/auth.js';
-
-        document.addEventListener('DOMContentLoaded', () => {
-            if (requireAuth()) {
-                initNavAuth();
-            }
-        });
+        
+        // Guard route - redirect to login if unauthenticated
+        const isAuthed = requireAuth();
+        if (isAuthed) {
+            initNavAuth();
+        }
     </script>
+    <script type="module" src="js/result.js"></script>
 </body>
 </html>

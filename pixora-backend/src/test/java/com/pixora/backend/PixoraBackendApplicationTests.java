@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
@@ -28,8 +29,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -339,6 +339,28 @@ class PixoraBackendApplicationTests {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.success").value(true))
 				.andExpect(jsonPath("$.photoId").value(photo.getId()));
+	}
+
+	@Test
+	void downloadPhotoEndpointReturnsAttachmentHeaders() throws Exception {
+		User user = userRepository.save(User.builder()
+				.firebaseUid("test-uid-harry")
+				.email("harry@pixora.app")
+				.name("Harry")
+				.build());
+
+		Photo photo = photoRepository.save(Photo.builder()
+				.userId(user.getId())
+				.originalImageUrl("http://localhost:8080/storage/original/harry.jpg")
+				.generatedImageUrl("http://localhost:8080/storage/photos/photos/" + user.getId() + "/generated/sample.png")
+				.status("DONE")
+				.build());
+
+		mockMvc.perform(get("/api/photos/" + photo.getId() + "/download")
+						.header("Authorization", "Bearer test-token-harry"))
+				.andExpect(status().isOk())
+				.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"pixora-portrait-" + photo.getId() + ".png\""))
+				.andExpect(content().contentType(MediaType.IMAGE_PNG));
 	}
 
 	@Test
