@@ -148,3 +148,29 @@ export async function getPhoto(photoId) {
     }
     return data;
 }
+
+/**
+ * Get all photos belonging to the authenticated user
+ */
+export async function getMyPhotos() {
+    const response = await apiFetch('/photos');
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch photos');
+    }
+    return data;
+}
+
+/**
+ * Delete a photo by ID
+ */
+export async function deletePhoto(photoId) {
+    const response = await apiFetch(`/photos/${photoId}`, {
+        method: 'DELETE'
+    });
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete photo');
+    }
+    return data;
+}

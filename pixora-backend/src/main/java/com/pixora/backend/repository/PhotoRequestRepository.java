@@ -12,4 +12,6 @@ public interface PhotoRequestRepository extends JpaRepository<PhotoRequest, Long
     List<PhotoRequest> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     List<PhotoRequest> findByPhotoId(Long photoId);
+
+    void deleteByPhotoId(Long photoId);
 }

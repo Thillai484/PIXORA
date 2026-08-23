@@ -364,6 +364,66 @@ class PixoraBackendApplicationTests {
 	}
 
 	@Test
+	void getUserPhotosRetrievesUserGalleryList() throws Exception {
+		User user = userRepository.save(User.builder()
+				.firebaseUid("test-uid-ian")
+				.email("ian@pixora.app")
+				.name("Ian")
+				.build());
+
+		photoRepository.save(Photo.builder()
+				.userId(user.getId())
+				.originalImageUrl("http://localhost:8080/storage/original/photo1.jpg")
+				.mode("OFFICIAL")
+				.photoType("RESUME")
+				.status("DONE")
+				.build());
+
+		photoRepository.save(Photo.builder()
+				.userId(user.getId())
+				.originalImageUrl("http://localhost:8080/storage/original/photo2.jpg")
+				.mode("OFFICIAL")
+				.photoType("PASSPORT")
+				.status("DONE")
+				.build());
+
+		mockMvc.perform(get("/api/photos")
+						.header("Authorization", "Bearer test-token-ian"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(2));
+	}
+
+	@Test
+	void deletePhotoDeletesRecordAndAssociatedRequests() throws Exception {
+		User user = userRepository.save(User.builder()
+				.firebaseUid("test-uid-julia")
+				.email("julia@pixora.app")
+				.name("Julia")
+				.build());
+
+		Photo photo = photoRepository.save(Photo.builder()
+				.userId(user.getId())
+				.originalImageUrl("http://localhost:8080/storage/original/julia.jpg")
+				.status("DONE")
+				.build());
+
+		photoRequestRepository.save(PhotoRequest.builder()
+				.userId(user.getId())
+				.photoId(photo.getId())
+				.requestType("SINGLE_PHOTO")
+				.status("COMPLETED")
+				.build());
+
+		mockMvc.perform(delete("/api/photos/" + photo.getId())
+						.header("Authorization", "Bearer test-token-julia"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true));
+
+		assertFalse(photoRepository.findById(photo.getId()).isPresent());
+		assertTrue(photoRequestRepository.findByPhotoId(photo.getId()).isEmpty());
+	}
+
+	@Test
 	void testStorageServiceUploadAndTestController() throws Exception {
 		MockMultipartFile sampleFile = new MockMultipartFile(
 				"file",

@@ -3,61 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Photos — Pixora</title>
-    <meta name="description" content="View and manage your generated professional photos.">
+    <title>My Studio Gallery — Pixora</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%22100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
 </head>
 <body>
+    <!-- Ambient Background -->
     <div class="ambient-bg">
+        <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>
         <div class="orb orb-3"></div>
     </div>
 
+    <!-- Header -->
     <header>
         <div class="nav-container">
             <a href="index.html" class="logo">
-                <span class="logo-icon">✦</span>
+                <span class="logo-icon">✨</span>
                 <span class="logo-text">Pixora</span>
             </a>
-            <nav>
-                <ul class="nav-links">
-                    <li><a href="index.html">Home</a></li>
-                    <li><a href="upload.html" class="btn btn-primary btn-sm">+ New Photo</a></li>
-                    <li><a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a></li>
-                </ul>
-            </nav>
+            <ul class="nav-links">
+                <li><a href="index.html#how-it-works">How It Works</a></li>
+                <li><a href="upload.html">Upload</a></li>
+                <li><a href="my-photos.html" class="active" style="color: var(--accent-light); font-weight: 700;">My Photos</a></li>
+                <li id="nav-auth-container">
+                    <a href="login.html" class="btn btn-secondary btn-nav-signin">Sign In</a>
+                </li>
+            </ul>
         </div>
     </header>
 
-    <main class="container">
-        <div class="placeholder-card reveal active">
-            <h2>My Photo Library</h2>
-            <p>View, download, and manage your AI-generated studio portraits.</p>
-            <a href="upload.html" class="btn btn-secondary">Upload First Photo</a>
+    <!-- Main Content -->
+    <main>
+        <div class="container gallery-container">
+            <!-- Top Heading Bar -->
+            <div class="gallery-top-bar">
+                <div class="gallery-heading-group">
+                    <h1>My Studio Gallery</h1>
+                    <p>All your transformed portraits, high-resolution downloads, and presets.</p>
+                </div>
+                <a href="upload.html" class="btn btn-primary">
+                    <span>➕ Upload New Photo</span>
+                </a>
+            </div>
+
+            <!-- Toolbar: Filters & Sort -->
+            <div class="gallery-toolbar">
+                <div class="filter-tabs">
+                    <button type="button" class="filter-btn active" data-filter="all">All Portraits (<span id="count-all">0</span>)</button>
+                    <button type="button" class="filter-btn" data-filter="OFFICIAL">Official Presets (<span id="count-official">0</span>)</button>
+                    <button type="button" class="filter-btn" data-filter="PROFESSIONAL">Professional Custom (<span id="count-professional">0</span>)</button>
+                </div>
+                <div class="sort-wrapper">
+                    <label for="sort-select" class="sort-label">Sort by:</label>
+                    <select id="sort-select" class="sort-select">
+                        <option value="desc">Newest First</option>
+                        <option value="asc">Oldest First</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Gallery Loading Indicator -->
+            <div id="gallery-loader" style="text-align: center; padding: 4rem 1rem;">
+                <div class="spinner" style="width: 36px; height: 36px; border-width: 3px;"></div>
+                <p style="margin-top: 1rem; color: var(--text-secondary);">Loading your studio collection...</p>
+            </div>
+
+            <!-- Gallery Grid -->
+            <div id="gallery-grid" class="gallery-grid" style="display: none;"></div>
+
+            <!-- Empty State -->
+            <div id="gallery-empty" class="empty-gallery-card" style="display: none;">
+                <span class="empty-graphic">📸✨</span>
+                <h2 class="empty-title">No Portraits Yet</h2>
+                <p class="empty-desc">You haven't generated any studio portraits yet. Upload your first photo to transform it in seconds.</p>
+                <a href="upload.html" class="btn btn-primary btn-lg">
+                    <span>Upload Your First Photo ✨</span>
+                </a>
+            </div>
         </div>
     </main>
 
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-icon">🗑️</div>
+            <h3 class="modal-heading">Delete Portrait?</h3>
+            <p class="modal-desc">Are you sure you want to permanently delete this photo and all generated versions? This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button type="button" id="btn-modal-cancel" class="btn btn-secondary">Cancel</button>
+                <button type="button" id="btn-modal-confirm" class="btn btn-danger" style="background: #ef4444; color: #fff; border: none; font-weight: 700; padding: 0.65rem 1.5rem; border-radius: var(--radius-full); cursor: pointer;">
+                    <span id="del-btn-text">Confirm Delete</span>
+                    <span id="del-btn-spinner" class="spinner" style="display: none;"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
     <footer>
         <div class="footer-container">
-            <div class="footer-copy">
-                &copy; 2026 Pixora. AI-Powered Professional Photo Studio.
-            </div>
+            <p class="footer-copy">&copy; 2026 Pixora. AI-Powered Professional Photo Studio.</p>
             <ul class="footer-links">
                 <li><a href="index.html">Home</a></li>
-                <li><a href="upload.html">Create Photo</a></li>
+                <li><a href="upload.html">Upload</a></li>
+                <li><a href="my-photos.html">My Photos</a></li>
             </ul>
         </div>
     </footer>
 
+    <!-- Scripts -->
     <script type="module">
         import { requireAuth, initNavAuth } from './js/auth.js';
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Require authentication before accessing library
-            if (requireAuth()) {
-                initNavAuth();
-            }
-        });
+        
+        // Guard route - redirect to login if unauthenticated
+        const isAuthed = requireAuth();
+        if (isAuthed) {
+            initNavAuth();
+        }
     </script>
+    <script type="module" src="js/my-photos.js"></script>
 </body>
 </html>

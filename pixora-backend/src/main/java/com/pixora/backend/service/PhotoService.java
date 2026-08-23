@@ -14,7 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -184,6 +186,46 @@ public class PhotoService {
                 .createdAt(photo.getCreatedAt())
                 .updatedAt(photo.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * Retrieve all photos belonging to the authenticated user
+     */
+    @Transactional(readOnly = true)
+    public List<PhotoResponse> getUserPhotos(FirebaseUserPrincipal principal) {
+        UserResponse user = firebaseAuthService.syncGoogleUser(principal);
+        List<Photo> photos = photoRepository.findByUserIdOrderByCreatedAtDesc(user.getId());
+
+        return photos.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Delete a photo and its associated files
+     */
+    @Transactional
+    public void deletePhoto(FirebaseUserPrincipal principal, Long photoId) {
+        UserResponse user = firebaseAuthService.syncGoogleUser(principal);
+
+        Photo photo = photoRepository.findByIdAndUserId(photoId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Photo not found or does not belong to user with id: " + photoId));
+
+        // 1. Delete associated PhotoRequests
+        photoRequestRepository.deleteByPhotoId(photo.getId());
+
+        // 2. Delete storage files
+        if (photo.getOriginalImageUrl() != null) {
+            storageService.deleteFile(photo.getOriginalImageUrl());
+        }
+        if (photo.getGeneratedImageUrl() != null) {
+            storageService.deleteFile(photo.getGeneratedImageUrl());
+        }
+
+        // 3. Delete Photo entity
+        photoRepository.delete(photo);
+
+        log.info("Photo {} deleted successfully for user {}", photoId, user.getId());
     }
 
     /**

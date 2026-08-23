@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -103,6 +104,28 @@ public class PhotoController {
     }
 
     /**
+     * Retrieve all photos belonging to the authenticated user
+     */
+    @GetMapping
+    public ResponseEntity<List<PhotoResponse>> getUserPhotos(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal
+    ) {
+        List<PhotoResponse> photos = photoService.getUserPhotos(principal);
+        return ResponseEntity.ok(photos);
+    }
+
+    /**
+     * Alias for /api/photos/me
+     */
+    @GetMapping("/me")
+    public ResponseEntity<List<PhotoResponse>> getMyPhotos(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal
+    ) {
+        List<PhotoResponse> photos = photoService.getUserPhotos(principal);
+        return ResponseEntity.ok(photos);
+    }
+
+    /**
      * Get details of a specific photo by ID
      */
     @GetMapping("/{id}")
@@ -111,6 +134,22 @@ public class PhotoController {
             @PathVariable Long id
     ) {
         PhotoResponse response = photoService.getPhotoById(id, principal.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Delete a photo by ID
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> deletePhoto(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @PathVariable Long id
+    ) {
+        photoService.deletePhoto(principal, id);
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Photo deleted successfully");
+        response.put("photoId", id);
         return ResponseEntity.ok(response);
     }
 
