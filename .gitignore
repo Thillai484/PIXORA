@@ -1,0 +1,31 @@
+# Java & Maven
+**/target/
+**/.mvn/wrapper/maven-wrapper.jar
+!pixora-backend/.mvn/wrapper/maven-wrapper.jar
+
+# IDE & Editors
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+
+# Node & Frontend
+node_modules/
+.vercel/
+
+# Secrets & Environment variables (NEVER COMMIT)
+.env
+.env.*
+!.env.example
+*.json
+!pixora-backend/pom.xml
+!pixora-frontend/vercel.json
+serviceAccountKey.json
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,66 @@
+/**
+ * Pixora API Client
+ * Centralized API configuration and network helper.
+ * Switching BASE_URL here will update the backend URL across the entire frontend.
+ */
+
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+// In production, replace with your deployed backend URL (Render / Railway) or keep relative/custom domain
+export const BASE_URL = isLocalhost 
+    ? 'http://localhost:8080/api' 
+    : 'http://localhost:8080/api'; // Update with live Render/Railway URL when deploying
+
+/**
+ * Health check helper to verify backend connectivity
+ */
+export async function checkBackendHealth() {
+    try {
+        const response = await fetch(`${BASE_URL}/health`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Backend health check failed:', error);
+        throw error;
+    }
+}
+
+/**
+ * Generic authenticated fetch wrapper
+ */
+export async function apiFetch(endpoint, options = {}) {
+    const url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}${endpoint}`;
+    const token = sessionStorage.getItem('pixora_token');
+
+    const headers = {
+        'Accept': 'application/json',
+        ...(options.headers || {})
+    };
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, {
+        ...options,
+        headers
+    });
+
+    if (response.status === 401) {
+        sessionStorage.removeItem('pixora_token');
+        sessionStorage.removeItem('pixora_user');
+        // Redirect to login if on protected page
+        if (!window.location.pathname.endsWith('login.html') && !window.location.pathname.endsWith('index.html')) {
+            window.location.href = 'login.html';
+        }
+    }
+
+    return response;
+}
