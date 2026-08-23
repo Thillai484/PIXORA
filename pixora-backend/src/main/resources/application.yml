@@ -42,9 +42,6 @@ gemini:
   api-key: ${GEMINI_API_KEY:}
   model: ${GEMINI_MODEL:gemini-2.5-flash-image}
 
-fal:
-  api-key: ${FAL_AI_API_KEY:}
-
 logging:
   level:
     root: INFO
